@@ -1,4 +1,5 @@
 ﻿using Avalonia;
+using Avalonia.Gtk3;
 using AvalonStudio.Shell;
 using AvalonStudio.Shell.Extensibility.Platforms;
 using NBitcoin;
@@ -23,36 +24,39 @@ namespace WalletWasabi.Gui
 			try
 			{
 				Platform.BaseDirectory = Path.Combine(Global.DataDir, "Gui");
-				BuildAvaloniaApp().BeforeStarting(async builder =>
-				{
-					MainWindowViewModel.Instance = new MainWindowViewModel();
-
-					var configFilePath = Path.Combine(Global.DataDir, "Config.json");
-					var config = new Config(configFilePath);
-					await config.LoadOrCreateDefaultFileAsync();
-					Logger.LogInfo<Config>("Config is successfully initialized.");
-
-					Global.InitializeConfig(config);
-
-					if (!File.Exists(Global.IndexFilePath)) // Load the index file from working folder if we have it.
+				AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
+				TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
+				BuildAvaloniaApp()
+					.BeforeStarting(async builder =>
 					{
-						var cachedIndexFilePath = Path.Combine("Assets", Path.GetFileName(Global.IndexFilePath));
-						if (File.Exists(cachedIndexFilePath))
+						MainWindowViewModel.Instance = new MainWindowViewModel();
+
+						var configFilePath = Path.Combine(Global.DataDir, "Config.json");
+						var config = new Config(configFilePath);
+						await config.LoadOrCreateDefaultFileAsync();
+						Logger.LogInfo<Config>("Config is successfully initialized.");
+
+						Global.InitializeConfig(config);
+
+						if (!File.Exists(Global.IndexFilePath)) // Load the index file from working folder if we have it.
 						{
-							File.Copy(cachedIndexFilePath, Global.IndexFilePath, overwrite: false);
+							var cachedIndexFilePath = Path.Combine("Assets", Path.GetFileName(Global.IndexFilePath));
+							if (File.Exists(cachedIndexFilePath))
+							{
+								File.Copy(cachedIndexFilePath, Global.IndexFilePath, overwrite: false);
+							}
 						}
-					}
 
-					Global.InitializeNoWallet();
-					statusBar = new StatusBarViewModel(Global.Nodes.ConnectedNodes, Global.MemPoolService, Global.IndexDownloader, Global.UpdateChecker);
+						Global.InitializeNoWallet();
+						statusBar = new StatusBarViewModel(Global.Nodes.ConnectedNodes, Global.Synchronizer, Global.UpdateChecker);
 
-					MainWindowViewModel.Instance.StatusBar = statusBar;
+						MainWindowViewModel.Instance.StatusBar = statusBar;
 
-					if (Global.IndexDownloader.Network != Network.Main)
-					{
-						MainWindowViewModel.Instance.Title += $" - {Global.IndexDownloader.Network}";
-					}
-				}).StartShellApp<AppBuilder, MainWindow>("Wasabi Wallet", null, () => MainWindowViewModel.Instance);
+						if (Global.Synchronizer.Network != Network.Main)
+						{
+							MainWindowViewModel.Instance.Title += $" - {Global.Synchronizer.Network}";
+						}
+					}).StartShellApp<AppBuilder, MainWindow>("Wasabi Wallet", null, () => MainWindowViewModel.Instance);
 			}
 			catch (Exception ex)
 			{
@@ -63,27 +67,45 @@ namespace WalletWasabi.Gui
 			{
 				statusBar?.Dispose();
 				await Global.DisposeAsync();
+
+				AppDomain.CurrentDomain.UnhandledException -= CurrentDomain_UnhandledException;
+				TaskScheduler.UnobservedTaskException -= TaskScheduler_UnobservedTaskException;
 			}
+		}
+
+		static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
+		{
+			Logger.LogWarning(e?.Exception, "UnobservedTaskException");
+		}
+
+		static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
+		{
+			Logger.LogWarning(e?.ExceptionObject as Exception, "UnhandledException");
 		}
 
 		private static AppBuilder BuildAvaloniaApp()
 		{
-			var builder = AppBuilder.Configure<App>().UseReactiveUI();
+			var result = AppBuilder.Configure<App>();
 
-			if(RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 			{
-				builder.UseWin32().UseSkia();
+				result
+					.UseWin32()
+					.UseDirect2D1();
 			}
-			else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+			else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
 			{
-				builder.UseAvaloniaNative().UseSkia();
+				result.UseGtk3(new Gtk3PlatformOptions
+				{
+					UseDeferredRendering = true,
+					UseGpuAcceleration = true
+				}).UseSkia();
 			}
-			else
 			{
-				builder.UsePlatformDetect();
+				result.UsePlatformDetect();
 			}
 
-			return builder;
+			return result;
 		}
 	}
 }

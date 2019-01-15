@@ -23,6 +23,20 @@ namespace System.Linq
 			return current;
 		}
 
+		public static void Shuffle<T>(this IList<T> list)
+		{
+			var rng = new Random();
+			int n = list.Count;
+			while (n > 1)
+			{
+				n--;
+				int k = rng.Next(n + 1);
+				T value = list[k];
+				list[k] = list[n];
+				list[n] = value;
+			}
+		}
+
 		// https://stackoverflow.com/a/2992364
 		public static void RemoveByValue<TKey, TValue>(this Dictionary<TKey, TValue> me, TValue value)
 		{
@@ -60,6 +74,23 @@ namespace System.Linq
 		public static bool NotNullAndNotEmpty<T>(this IEnumerable<T> source)
 		{
 			return !(source is null) && source.Any();
+		}
+
+		public static IEnumerable<IEnumerable<T>> GetPermutations<T>(this IEnumerable<T> items, int count)
+		{
+			int i = 0;
+			foreach (var item in items)
+			{
+				if (count == 1)
+					yield return new T[] { item };
+				else
+				{
+					foreach (var result in items.Skip(i + 1).GetPermutations(count - 1))
+						yield return new T[] { item }.Concat(result);
+				}
+
+				++i;
+			}
 		}
 	}
 }

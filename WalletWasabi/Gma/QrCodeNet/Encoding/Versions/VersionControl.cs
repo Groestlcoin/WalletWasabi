@@ -14,7 +14,7 @@ namespace Gma.QrCodeNet.Encoding.Versions
 		/// <param name="dataBitsLength">Number of bits for encoded content</param>
 		/// <param name="encodingName">Encoding name for EightBitByte</param>
 		/// <returns>VersionDetail and ECI</returns>
-		internal static VersionControlStruct InitialSetup(int dataBitsLength, Mode mode, ErrorCorrectionLevel level, string encodingName)
+		internal static VersionControlStruct InitialSetup(int dataBitsLength, ErrorCorrectionLevel level, string encodingName)
 		{
 			int totalDataBits = dataBitsLength;
 
@@ -22,23 +22,20 @@ namespace Gma.QrCodeNet.Encoding.Versions
 
 			BitList eciHeader = new BitList();
 
-			//Check ECI header
-			if (mode == Mode.EightBitByte)
+			if (encodingName != DEFAULT_ENCODING && encodingName != QRCodeConstantVariable.UTF8Encoding)
 			{
-				if (encodingName != DEFAULT_ENCODING && encodingName != QRCodeConstantVariable.UTF8Encoding)
-				{
-					ECISet eciSet = new ECISet(ECISet.AppendOption.NameToValue);
-					int eciValue = eciSet.GetECIValueByName(encodingName);
+				ECISet eciSet = new ECISet(ECISet.AppendOption.NameToValue);
+				int eciValue = eciSet.GetECIValueByName(encodingName);
 
-					totalDataBits += ECISet.NumOfECIHeaderBits(eciValue);
-					eciHeader = eciSet.GetECIHeader(encodingName);
-					containECI = true;
-				}
+				totalDataBits += ECISet.NumOfECIHeaderBits(eciValue);
+				eciHeader = eciSet.GetECIHeader(encodingName);
+				containECI = true;
 			}
-			//Determine which version group it belong to
-			int searchGroup = DynamicSearchIndicator(totalDataBits, level, mode);
 
-			int[] charCountIndicator = CharCountIndicatorTable.GetCharCountIndicatorSet(mode);
+			//Determine which version group it belong to
+			int searchGroup = DynamicSearchIndicator(totalDataBits, level);
+
+			int[] charCountIndicator = CharCountIndicatorTable.GetCharCountIndicatorSet();
 
 			totalDataBits += (NUM_BITS_MODE_INDICATOR + charCountIndicator[searchGroup]);
 
@@ -61,7 +58,7 @@ namespace Gma.QrCodeNet.Encoding.Versions
 		{
 			if (versionNum < 1 || versionNum > 40)
 			{
-				throw new InvalidOperationException(string.Format("Unexpected version number: {0}", versionNum));
+				throw new InvalidOperationException($"Unexpected version number: {versionNum}");
 			}
 
 			VersionControlStruct vcStruct = new VersionControlStruct();
@@ -89,11 +86,10 @@ namespace Gma.QrCodeNet.Encoding.Versions
 		/// </summary>
 		/// <param name="numBits">number of bits for bitlist where it contain DataBits encode from input content and ECI header</param>
 		/// <param name="level">Error correction level</param>
-		/// <param name="mode">Mode</param>
 		/// <returns>Version group index for VERSION_GROUP</returns>
-		private static int DynamicSearchIndicator(int numBits, ErrorCorrectionLevel level, Mode mode)
+		private static int DynamicSearchIndicator(int numBits, ErrorCorrectionLevel level)
 		{
-			int[] charCountIndicator = CharCountIndicatorTable.GetCharCountIndicatorSet(mode);
+			int[] charCountIndicator = CharCountIndicatorTable.GetCharCountIndicatorSet();
 			int totalBits = 0;
 			int loopLength = VERSION_GROUP.Length;
 			for (int i = 0; i < loopLength; i++)
@@ -111,7 +107,7 @@ namespace Gma.QrCodeNet.Encoding.Versions
 				}
 			}
 
-			throw new InputOutOfBoundaryException(string.Format("QRCode do not have enough space for {0} bits", (numBits + NUM_BITS_MODE_INDICATOR + charCountIndicator[2])));
+			throw new InputOutOfBoundaryException($"QRCode do not have enough space for {(numBits + NUM_BITS_MODE_INDICATOR + charCountIndicator[2])} bits");
 		}
 
 		/// <summary>

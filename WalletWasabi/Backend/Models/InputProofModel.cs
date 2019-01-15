@@ -1,5 +1,4 @@
-﻿using NBitcoin;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System.ComponentModel.DataAnnotations;
 using WalletWasabi.JsonConverters;
 using WalletWasabi.Models;
@@ -12,6 +11,9 @@ namespace WalletWasabi.Backend.Models
 		public TxoRef Input { get; set; }
 
 		[Required]
-		public string Proof { get; set; }
+		[MinLength(65, ErrorMessage = "Provided proof is invalid")] // Bitcoin compact signatures are 65 bytes length
+		[MaxLength(65, ErrorMessage = "Provided proof is invalid")] // Bitcoin compact signatures are 65 bytes length
+		[JsonConverter(typeof(ByteArrayJsonConverter))]
+		public byte[] Proof { get; set; }
 	}
 }

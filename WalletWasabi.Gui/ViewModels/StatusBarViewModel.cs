@@ -16,6 +16,9 @@ using AvalonStudio.Shell;
 using WalletWasabi.Gui.Tabs;
 using System.Reactive.Linq;
 using WalletWasabi.Gui.Dialogs;
+using System.Runtime.InteropServices;
+using System.Reactive.Disposables;
+using System.ComponentModel;
 
 namespace WalletWasabi.Gui.ViewModels
 {
@@ -29,8 +32,7 @@ namespace WalletWasabi.Gui.ViewModels
 	public class StatusBarViewModel : ViewModelBase, IDisposable
 	{
 		public NodesCollection Nodes { get; }
-		public MemPoolService MemPoolService { get; }
-		public IndexDownloader IndexDownloader { get; }
+		public WasabiSynchronizer Synchronizer { get; }
 		public UpdateChecker UpdateChecker { get; }
 
 		private UpdateStatus _updateStatus;
@@ -127,14 +129,12 @@ namespace WalletWasabi.Gui.ViewModels
 			}
 		}
 
-		private int _mempool;
-
-		public int Mempool
+		public string BtcPrice
 		{
-			get { return _mempool; }
-			set
+			get => _btcPrice;
+			set 
 			{
-				this.RaiseAndSetIfChanged(ref _mempool, value);
+				this.RaiseAndSetIfChanged(ref _btcPrice, value);
 			}
 		}
 
@@ -149,7 +149,7 @@ namespace WalletWasabi.Gui.ViewModels
 		private long _clientOutOfDate;
 		private long _backendIncompatible;
 
-		public StatusBarViewModel(NodesCollection nodes, MemPoolService memPoolService, IndexDownloader indexDownloader, UpdateChecker updateChecker)
+		public StatusBarViewModel(NodesCollection nodes, WasabiSynchronizer synchronizer, UpdateChecker updateChecker)
 		{
 			_clientOutOfDate = 0;
 			_backendIncompatible = 0;
@@ -163,19 +163,13 @@ namespace WalletWasabi.Gui.ViewModels
 			BlocksLeft = 0;
 			WalletService.ConcurrentBlockDownloadNumberChanged += WalletService_ConcurrentBlockDownloadNumberChanged;
 
-			MemPoolService = memPoolService;
-			MemPoolService.TransactionReceived += MemPoolService_TransactionReceived;
-			Mempool = MemPoolService.TransactionHashes.Count;
-
-			IndexDownloader = indexDownloader;
+			Synchronizer = synchronizer;
 			UpdateChecker = updateChecker;
-			IndexDownloader.NewFilter += IndexDownloader_NewFilter;
-			IndexDownloader.BestHeightChanged += IndexDownloader_BestHeightChanged;
-			IndexDownloader.TorStatusChanged += IndexDownloader_TorStatusChanged;
-			IndexDownloader.BackendStatusChanged += IndexDownloader_BackendStatusChanged;
-			IndexDownloader.ResponseArrivedIsGenSocksServFail += IndexDownloader_ResponseArrivedIsGenSocksServFail;
+			Synchronizer.NewFilter += IndexDownloader_NewFilter;
+			Synchronizer.PropertyChanged += Synchronizer_PropertyChanged;
+			Synchronizer.ResponseArrivedIsGenSocksServFail += IndexDownloader_ResponseArrivedIsGenSocksServFail;
 
-			FiltersLeft = IndexDownloader.GetFiltersLeft();
+			FiltersLeft = Synchronizer.GetFiltersLeft();
 
 			this.WhenAnyValue(x => x.BlocksLeft).Subscribe(blocks =>
 			{
@@ -224,6 +218,26 @@ namespace WalletWasabi.Gui.ViewModels
 			}, this.WhenAnyValue(x => x.UpdateStatus).Select(x => x != UpdateStatus.Latest));
 		}
 
+		private void Synchronizer_PropertyChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == nameof(Synchronizer.TorStatus))
+			{
+				Tor = Synchronizer.TorStatus;
+			}
+			else if (e.PropertyName == nameof(Synchronizer.BackendStatus))
+			{
+				Backend = Synchronizer.BackendStatus;
+			}
+			else if (e.PropertyName == nameof(Synchronizer.BestBlockchainHeight))
+			{
+				FiltersLeft = Synchronizer.GetFiltersLeft();
+			}
+			else if (e.PropertyName == nameof(Synchronizer.UsdExchangeRate))
+			{
+				BtcPrice = $"${(long)Synchronizer.UsdExchangeRate}";
+			}
+		}
+
 		private void IndexDownloader_ResponseArrivedIsGenSocksServFail(object sender, bool isGenSocksServFail)
 		{
 			if (isGenSocksServFail)
@@ -235,8 +249,13 @@ namespace WalletWasabi.Gui.ViewModels
 				}
 				else
 				{
-					// Show GenSocksServFail dialog.
-					MainWindowViewModel.Instance.ShowDialogAsync(new GenSocksServFailDialogViewModel()).GetAwaiter();
+					// Show GenSocksServFail dialog on OS-es we suspect Tor is outdated.
+					var osDesc = RuntimeInformation.OSDescription;
+					if (osDesc.Contains("16.04.1-Ubuntu", StringComparison.InvariantCultureIgnoreCase)
+						|| osDesc.Contains("16.04.0-Ubuntu", StringComparison.InvariantCultureIgnoreCase))
+					{
+						MainWindowViewModel.Instance.ShowDialogAsync(new GenSocksServFailDialogViewModel()).GetAwaiter();
+					}
 				}
 			}
 			else
@@ -292,29 +311,9 @@ namespace WalletWasabi.Gui.ViewModels
 			}
 		}
 
-		private void IndexDownloader_BackendStatusChanged(object sender, BackendStatus e)
-		{
-			Backend = e;
-		}
-
-		private void IndexDownloader_TorStatusChanged(object sender, TorStatus e)
-		{
-			Tor = e;
-		}
-
 		private void IndexDownloader_NewFilter(object sender, Backend.Models.FilterModel e)
 		{
-			FiltersLeft = IndexDownloader.GetFiltersLeft();
-		}
-
-		private void IndexDownloader_BestHeightChanged(object sender, Height e)
-		{
-			FiltersLeft = IndexDownloader.GetFiltersLeft();
-		}
-
-		private void MemPoolService_TransactionReceived(object sender, SmartTransaction e)
-		{
-			Mempool = MemPoolService.TransactionHashes.Count;
+			FiltersLeft = Synchronizer.GetFiltersLeft();
 		}
 
 		private void Nodes_Removed(object sender, NodeEventArgs e)
@@ -330,6 +329,7 @@ namespace WalletWasabi.Gui.ViewModels
 		#region IDisposable Support
 
 		private volatile bool _disposedValue = false; // To detect redundant calls
+		private string _btcPrice;
 
 		protected virtual void Dispose(bool disposing)
 		{
@@ -339,12 +339,9 @@ namespace WalletWasabi.Gui.ViewModels
 				{
 					Nodes.Added -= Nodes_Added;
 					Nodes.Removed -= Nodes_Removed;
-					MemPoolService.TransactionReceived -= MemPoolService_TransactionReceived;
-					IndexDownloader.NewFilter -= IndexDownloader_NewFilter;
-					IndexDownloader.BestHeightChanged -= IndexDownloader_BestHeightChanged;
-					IndexDownloader.TorStatusChanged -= IndexDownloader_TorStatusChanged;
-					IndexDownloader.BackendStatusChanged -= IndexDownloader_BackendStatusChanged;
-					IndexDownloader.ResponseArrivedIsGenSocksServFail -= IndexDownloader_ResponseArrivedIsGenSocksServFail;
+					Synchronizer.NewFilter -= IndexDownloader_NewFilter;
+					Synchronizer.PropertyChanged -= Synchronizer_PropertyChanged;
+					Synchronizer.ResponseArrivedIsGenSocksServFail -= IndexDownloader_ResponseArrivedIsGenSocksServFail;
 				}
 
 				_disposedValue = true;

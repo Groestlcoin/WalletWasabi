@@ -1,14 +1,10 @@
-﻿using System.Collections;
-
-namespace Gma.QrCodeNet.Encoding.DataEncodation
+﻿namespace Gma.QrCodeNet.Encoding.DataEncodation
 {
 	public abstract class EncoderBase
 	{
 		internal EncoderBase()
 		{
 		}
-
-		internal abstract Mode Mode { get; }
 
 		protected virtual int GetDataLength(string content) => content.Length;
 
@@ -20,7 +16,7 @@ namespace Gma.QrCodeNet.Encoding.DataEncodation
 		internal abstract BitList GetDataBits(string content);
 
 		/// <summary>
-		/// Returns bit representation of <see cref="Mode"/> value.
+		/// Returns bit representation of Modevalue.
 		/// </summary>
 		/// <returns></returns>
 		/// <remarks>See Chapter 8.4 Data encodation, Table 2 — Mode indicators</remarks>
@@ -28,7 +24,7 @@ namespace Gma.QrCodeNet.Encoding.DataEncodation
 		{
 			BitList modeIndicatorBits = new BitList
 			{
-				{ (int)Mode, 4 }
+				{ (int)0001 << 2, 4 }
 			};
 			return modeIndicatorBits;
 		}

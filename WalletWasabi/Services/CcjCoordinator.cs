@@ -19,7 +19,6 @@ namespace WalletWasabi.Services
 		private List<CcjRound> Rounds { get; }
 		private AsyncLock RoundsListLock { get; }
 
-		private List<uint256> UnconfirmedCoinJoins { get; }
 		private List<uint256> CoinJoins { get; }
 		public string CoinJoinsFilePath => Path.Combine(FolderPath, $"CoinJoins{Network}.txt");
 		private AsyncLock CoinJoinsLock { get; }
@@ -34,8 +33,6 @@ namespace WalletWasabi.Services
 
 		public string FolderPath { get; }
 
-		public BlindingRsaKey RsaKey { get; }
-
 		public UtxoReferee UtxoReferee { get; }
 
 		public CcjCoordinator(Network network, string folderPath, RPCClient rpc, CcjRoundConfig roundConfig)
@@ -49,26 +46,11 @@ namespace WalletWasabi.Services
 			RoundsListLock = new AsyncLock();
 
 			CoinJoins = new List<uint256>();
-			UnconfirmedCoinJoins = new List<uint256>();
 			CoinJoinsLock = new AsyncLock();
 
 			Directory.CreateDirectory(FolderPath);
 
-			UtxoReferee = new UtxoReferee(Network, FolderPath, RpcClient);
-
-			// Initialize RsaKey
-			string rsaKeyPath = Path.Combine(FolderPath, "RsaKey.json");
-			if (File.Exists(rsaKeyPath))
-			{
-				string rsaKeyJson = File.ReadAllText(rsaKeyPath, encoding: Encoding.UTF8);
-				RsaKey = BlindingRsaKey.CreateFromJson(rsaKeyJson);
-			}
-			else
-			{
-				RsaKey = new BlindingRsaKey();
-				File.WriteAllText(rsaKeyPath, RsaKey.ToJson(), encoding: Encoding.UTF8);
-				Logger.LogInfo<CcjCoordinator>($"Created RSA key at: {rsaKeyPath}");
-			}
+			UtxoReferee = new UtxoReferee(Network, FolderPath, RpcClient, RoundConfig);
 
 			if (File.Exists(CoinJoinsFilePath))
 			{
@@ -83,10 +65,6 @@ namespace WalletWasabi.Services
 							uint256 txHash = new uint256(line);
 							RPCResponse getRawTransactionResponse = RpcClient.SendCommand(RPCOperations.getrawtransaction, txHash.ToString(), true);
 							CoinJoins.Add(txHash);
-							if (getRawTransactionResponse.Result.Value<int>("confirmations") <= 0)
-							{
-								UnconfirmedCoinJoins.Add(txHash);
-							}
 						}
 						catch (Exception ex)
 						{
@@ -112,6 +90,27 @@ namespace WalletWasabi.Services
 					File.Delete(CoinJoinsFilePath);
 				}
 			}
+
+			try
+			{
+				string roundCountFilePath = Path.Combine(folderPath, "RoundCount.txt");
+				if (File.Exists(roundCountFilePath))
+				{
+					string roundCount = File.ReadAllText(roundCountFilePath);
+					CcjRound.RoundCount = long.Parse(roundCount);
+				}
+				else
+				{
+					// First time initializes (so the first constructor will increment it and we'll start from 1.)
+					CcjRound.RoundCount = 0;
+				}
+			}
+			catch (Exception ex)
+			{
+				CcjRound.RoundCount = 0;
+				Logger.LogInfo<CcjCoordinator>($"{nameof(CcjRound.RoundCount)} file was corrupt. Resetting to 0.");
+				Logger.LogDebug<CcjCoordinator>(ex);
+			}
 		}
 
 		public async Task ProcessBlockAsync(Block block)
@@ -132,17 +131,18 @@ namespace WalletWasabi.Services
 					OutPoint prevOut = input.PrevOut;
 
 					// if coin is not banned
-					if (UtxoReferee.BannedUtxos.TryGetValue(prevOut, out (int severity, DateTimeOffset timeOfBan) found))
+					var foundElem = await UtxoReferee.TryGetBannedAsync(prevOut, notedToo: true);
+					if (foundElem != null)
 					{
 						if (!AnyRunningRoundContainsInput(prevOut, out _))
 						{
-							int newSeverity = found.severity + 1;
+							int newSeverity = foundElem.Value.severity + 1;
 							await UtxoReferee.UnbanAsync(prevOut); // since it's not an UTXO anymore
 
 							if (RoundConfig.DosSeverity >= newSeverity)
 							{
 								var txCoins = tx.Outputs.AsIndexedOutputs().Select(x => x.ToCoin().Outpoint);
-								await UtxoReferee.BanUtxosAsync(newSeverity, found.timeOfBan, txCoins.ToArray());
+								await UtxoReferee.BanUtxosAsync(newSeverity, foundElem.Value.timeOfBan, forceNoted: foundElem.Value.isNoted, foundElem.Value.bannedForRound, txCoins.ToArray());
 							}
 						}
 					}
@@ -152,10 +152,10 @@ namespace WalletWasabi.Services
 
 		public void UpdateRoundConfig(CcjRoundConfig roundConfig)
 		{
-			RoundConfig = Guard.NotNull(nameof(roundConfig), roundConfig);
+			RoundConfig.UpdateOrDefault(roundConfig);
 		}
 
-		public async Task MakeSureTwoRunningRoundsAsync()
+		public async Task MakeSureTwoRunningRoundsAsync(Money feePerInputs = null, Money feePerOutputs = null)
 		{
 			using (await RoundsListLock.LockAsync())
 			{
@@ -165,13 +165,13 @@ namespace WalletWasabi.Services
 					var round = new CcjRound(RpcClient, UtxoReferee, RoundConfig);
 					round.CoinJoinBroadcasted += Round_CoinJoinBroadcasted;
 					round.StatusChanged += Round_StatusChangedAsync;
-					await round.ExecuteNextPhaseAsync(CcjRoundPhase.InputRegistration);
+					await round.ExecuteNextPhaseAsync(CcjRoundPhase.InputRegistration, feePerInputs, feePerOutputs);
 					Rounds.Add(round);
 
 					var round2 = new CcjRound(RpcClient, UtxoReferee, RoundConfig);
 					round2.StatusChanged += Round_StatusChangedAsync;
 					round2.CoinJoinBroadcasted += Round_CoinJoinBroadcasted;
-					await round2.ExecuteNextPhaseAsync(CcjRoundPhase.InputRegistration);
+					await round2.ExecuteNextPhaseAsync(CcjRoundPhase.InputRegistration, feePerInputs, feePerOutputs);
 					Rounds.Add(round2);
 				}
 				else if (runningRoundCount == 1)
@@ -179,20 +179,23 @@ namespace WalletWasabi.Services
 					var round = new CcjRound(RpcClient, UtxoReferee, RoundConfig);
 					round.StatusChanged += Round_StatusChangedAsync;
 					round.CoinJoinBroadcasted += Round_CoinJoinBroadcasted;
-					await round.ExecuteNextPhaseAsync(CcjRoundPhase.InputRegistration);
+					await round.ExecuteNextPhaseAsync(CcjRoundPhase.InputRegistration, feePerInputs, feePerOutputs);
 					Rounds.Add(round);
 				}
 			}
 		}
 
-		private void Round_CoinJoinBroadcasted(object sender, Transaction e)
+		private void Round_CoinJoinBroadcasted(object sender, Transaction transaction)
 		{
-			CoinJoinBroadcasted?.Invoke(sender, e);
+			CoinJoinBroadcasted?.Invoke(sender, transaction);
 		}
 
 		private async void Round_StatusChangedAsync(object sender, CcjRoundStatus status)
 		{
 			var round = sender as CcjRound;
+
+			Money feePerInputs = null;
+			Money feePerOutputs = null;
 
 			// If success save the coinjoin.
 			if (status == CcjRoundStatus.Succeded)
@@ -202,17 +205,67 @@ namespace WalletWasabi.Services
 					uint256 coinJoinHash = round.SignedCoinJoin.GetHash();
 					CoinJoins.Add(coinJoinHash);
 					await File.AppendAllLinesAsync(CoinJoinsFilePath, new[] { coinJoinHash.ToString() });
+
+					// When a round succeeded, adjust the denomination as to users still be able to register with the latest round's active output amount.
+					IEnumerable<(Money value, int count)> outputs = round.SignedCoinJoin.GetIndistinguishableOutputs();
+					var bestOutput = outputs.OrderByDescending(x => x.count).FirstOrDefault();
+					if (bestOutput != default)
+					{
+						Money activeOutputAmount = bestOutput.value;
+
+						var fees = await CcjRound.CalculateFeesAsync(RpcClient, RoundConfig.ConfirmationTarget.Value);
+						feePerInputs = fees.feePerInputs;
+						feePerOutputs = fees.feePerOutputs;
+
+						Money newDenominationToGetInWithactiveOutputs = activeOutputAmount - (feePerInputs + 2 * feePerOutputs);
+						if (newDenominationToGetInWithactiveOutputs < RoundConfig.Denomination)
+						{
+							if (newDenominationToGetInWithactiveOutputs > Money.Coins(0.01m))
+							{
+								RoundConfig.Denomination = newDenominationToGetInWithactiveOutputs;
+								await RoundConfig.ToFileAsync();
+							}
+						}
+					}
 				}
 			}
 
 			// If aborted in signing phase, then ban Alices those didn't sign.
 			if (status == CcjRoundStatus.Aborted && round.Phase == CcjRoundPhase.Signing)
 			{
-				foreach (Alice alice in round.GetAlicesByNot(AliceState.SignedCoinJoin, syncLock: false)) // Because the event sometimes is raised from inside the lock.
+				IEnumerable<Alice> alicesDidntSign = round.GetAlicesByNot(AliceState.SignedCoinJoin, syncLock: false);
+
+				CcjRound nextRound = GetCurrentInputRegisterableRoundOrDefault(syncLock: false);
+
+				if (nextRound != null)
+				{
+					int nextRoundAlicesCount = nextRound.CountAlices(syncLock: false);
+					var alicesSignedCount = round.AnonymitySet - alicesDidntSign.Count();
+
+					// New round's anonset should be the number of alices those signed in this round.
+					// Except if the number of alices in the next round is already larger.
+					var newAnonymitySet = Math.Max(alicesSignedCount, nextRoundAlicesCount);
+					// But it cannot be larger than the current anonset of that round.
+					newAnonymitySet = Math.Min(newAnonymitySet, nextRound.AnonymitySet);
+
+					// Only change the anonymity set of the next round if new anonset doesnt equal and newanonset larger than 1.
+					if (nextRound.AnonymitySet != newAnonymitySet && newAnonymitySet > 1)
+					{
+						nextRound.UpdateAnonymitySet(newAnonymitySet, syncLock: false);
+
+						if (nextRoundAlicesCount >= nextRound.AnonymitySet)
+						{
+							// Progress to the next phase, which will be OutputRegistration
+							await nextRound.ExecuteNextPhaseAsync(CcjRoundPhase.ConnectionConfirmation);
+						}
+					}
+				}
+
+				foreach (Alice alice in alicesDidntSign) // Because the event sometimes is raised from inside the lock.
 				{
 					// If its from any coinjoin, then don't ban.
-					IEnumerable<OutPoint> utxosToBan = alice.Inputs.Select(x => x.OutPoint);
-					await UtxoReferee.BanUtxosAsync(1, DateTimeOffset.UtcNow, utxosToBan.ToArray());
+					IEnumerable<OutPoint> utxosToBan = alice.Inputs.Select(x => x.Outpoint);
+					await UtxoReferee.BanUtxosAsync(1, DateTimeOffset.UtcNow, forceNoted: false, round.RoundId, utxosToBan.ToArray());
 				}
 			}
 
@@ -221,7 +274,7 @@ namespace WalletWasabi.Services
 			{
 				round.StatusChanged -= Round_StatusChangedAsync;
 				round.CoinJoinBroadcasted -= Round_CoinJoinBroadcasted;
-				await MakeSureTwoRunningRoundsAsync();
+				await MakeSureTwoRunningRoundsAsync(feePerInputs, feePerOutputs);
 			}
 		}
 
@@ -245,12 +298,17 @@ namespace WalletWasabi.Services
 			}
 		}
 
-		public CcjRound GetCurrentInputRegisterableRound()
+		public CcjRound GetCurrentInputRegisterableRoundOrDefault(bool syncLock = true)
 		{
-			using (RoundsListLock.Lock())
+			if (syncLock)
 			{
-				return Rounds.First(x => x.Status == CcjRoundStatus.Running && x.Phase == CcjRoundPhase.InputRegistration); // not FirstOrDefault, it must always exist
+				using (RoundsListLock.Lock())
+				{
+					return Rounds.FirstOrDefault(x => x.Status == CcjRoundStatus.Running && x.Phase == CcjRoundPhase.InputRegistration);
+				}
 			}
+
+			return Rounds.FirstOrDefault(x => x.Status == CcjRoundStatus.Running && x.Phase == CcjRoundPhase.InputRegistration);
 		}
 
 		public CcjRound TryGetRound(long roundId)
@@ -258,14 +316,6 @@ namespace WalletWasabi.Services
 			using (RoundsListLock.Lock())
 			{
 				return Rounds.SingleOrDefault(x => x.RoundId == roundId);
-			}
-		}
-
-		public CcjRound TryGetRound(string roundHash)
-		{
-			using (RoundsListLock.Lock())
-			{
-				return Rounds.SingleOrDefault(x => x.RoundHash == roundHash);
 			}
 		}
 
@@ -296,38 +346,9 @@ namespace WalletWasabi.Services
 			}
 		}
 
-		public async Task<bool> IsUnconfirmedCoinJoinLimitReachedAsync()
+		public int GetCoinJoinCount()
 		{
-			using (await CoinJoinsLock.LockAsync())
-			{
-				if (UnconfirmedCoinJoins.Count < 24)
-				{
-					return false;
-				}
-				foreach (var cjHash in UnconfirmedCoinJoins.ToArray())
-				{
-					try
-					{
-						var txInfo = await RpcClient.GetRawTransactionInfoAsync(cjHash);
-
-						// if confirmed remove only from unconfirmed
-						if (txInfo.Confirmations > 0)
-						{
-							UnconfirmedCoinJoins.Remove(cjHash);
-						}
-					}
-					catch (Exception ex)
-					{
-						// If aborted remove from everywhere (should not happen normally).
-						UnconfirmedCoinJoins.Remove(cjHash);
-						CoinJoins.Remove(cjHash);
-						await File.WriteAllLinesAsync(CoinJoinsFilePath, CoinJoins.Select(x => x.ToString()));
-						Logger.LogWarning<CcjCoordinator>(ex);
-					}
-				}
-
-				return UnconfirmedCoinJoins.Count >= 24;
-			}
+			return CoinJoins.Count;
 		}
 
 		#region IDisposable Support
@@ -346,6 +367,18 @@ namespace WalletWasabi.Services
 						{
 							round.StatusChanged -= Round_StatusChangedAsync;
 							round.CoinJoinBroadcasted -= Round_CoinJoinBroadcasted;
+						}
+
+						try
+						{
+							string roundCountFilePath = Path.Combine(FolderPath, "RoundCount.txt");
+
+							IoHelpers.EnsureContainingDirectoryExists(roundCountFilePath);
+							File.WriteAllText(roundCountFilePath, CcjRound.RoundCount.ToString());
+						}
+						catch (Exception ex)
+						{
+							Logger.LogDebug<CcjCoordinator>(ex);
 						}
 					}
 				}
