@@ -18,7 +18,7 @@ namespace WalletWasabi.WebClients.Gemini
 		{
 			using var httpClient = new HttpClient();
 			httpClient.BaseAddress = new Uri("https://api.gemini.com");
-			var response = await httpClient.GetAsync("/v1/pubticker/btcusd");
+			var response = await httpClient.GetAsync("/v1/pubticker/grsusd");
 			var data = await response.Content.ReadAsJsonAsync<GeminiExchangeRateInfo>();
 
 			var exchangeRates = new List<ExchangeRate>

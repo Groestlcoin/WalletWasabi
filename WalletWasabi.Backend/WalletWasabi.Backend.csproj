@@ -6,11 +6,11 @@
     <LangVersion>latest</LangVersion>
     <NoWarn>1701;1702;1705;1591;1573;CA1031</NoWarn>
     <Version>3.1</Version>
-    <Product>WalletWasabiApi</Product>
+    <Product>GroestlMixApi</Product>
     <Copyright>MIT</Copyright>
-    <PackageTags>walletwasabi, wasabiwallet, wasabi, hiddenwallet, wallet, bitcoin, hbitcoin, nbitcoin, magicalcryptowallet, magicalwallet, tor, chaum, chaumian, zerolink, coinjoin, fungibility, privacy, anonymity</PackageTags>
+    <PackageTags>walletgroestlmix, groestlmixwallet, groestlmix, hiddenwallet, wallet, groestlcoin, hbitcoin, nbitcoin, magicalcryptowallet, magicalwallet, tor, chaum, chaumian, zerolink, coinjoin, fungibility, privacy, anonymity</PackageTags>
     <RepositoryType>Git</RepositoryType>
-    <RepositoryUrl>https://github.com/zkSNACKs/WalletWasabi/</RepositoryUrl>
+    <RepositoryUrl>https://github.com/Groestlcoin/WalletWasabi/</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
@@ -32,13 +32,13 @@
     <DebugSymbols>false</DebugSymbols>
     <ErrorReport>none</ErrorReport>
   </PropertyGroup>
-  
+
   <ItemGroup>
     <RuntimeHostConfigurationOption Include="System.Globalization.Invariant" Value="true" />
   </ItemGroup>
-  
+
   <ItemGroup>
     <PackageReference Include="Swashbuckle.AspNetCore" Version="5.0.0" />
   </ItemGroup>
-  
+
 </Project>

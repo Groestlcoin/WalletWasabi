@@ -69,7 +69,7 @@ namespace WalletWasabi.Blockchain.BlockFilters
 			IoHelpers.EnsureContainingDirectoryExists(IndexFilePath);
 			if (File.Exists(IndexFilePath))
 			{
-				if (RpcClient.Network == Network.RegTest)
+				if (RpcClient.Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 				{
 					File.Delete(IndexFilePath); // RegTest is not a global ledger, better to delete it.
 				}
@@ -86,7 +86,7 @@ namespace WalletWasabi.Blockchain.BlockFilters
 			IoHelpers.EnsureContainingDirectoryExists(bech32UtxoSetFilePath);
 			if (File.Exists(bech32UtxoSetFilePath))
 			{
-				if (RpcClient.Network == Network.RegTest)
+				if (RpcClient.Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 				{
 					File.Delete(bech32UtxoSetFilePath); // RegTest is not a global ledger, better to delete it.
 				}

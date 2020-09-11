@@ -259,7 +259,7 @@ namespace WalletWasabi.Gui.ViewModels
 			{
 				try
 				{
-					await IoHelpers.OpenBrowserAsync("https://wasabiwallet.io/#download");
+					await IoHelpers.OpenBrowserAsync("https://groestlcoin.org/");
 				}
 				catch (Exception ex)
 				{

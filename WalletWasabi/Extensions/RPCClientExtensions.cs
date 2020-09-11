@@ -40,7 +40,7 @@ namespace NBitcoin.RPC
 
 		public static async Task<EstimateSmartFeeResponse> EstimateSmartFeeAsync(this RPCClient rpc, int confirmationTarget, EstimateSmartFeeMode estimateMode = EstimateSmartFeeMode.Conservative, bool simulateIfRegTest = false, bool tryOtherFeeRates = true)
 		{
-			if (simulateIfRegTest && rpc.Network == Network.RegTest)
+			if (simulateIfRegTest && rpc.Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 			{
 				return SimulateRegTestFeeEstimation(confirmationTarget, estimateMode);
 			}
@@ -54,7 +54,7 @@ namespace NBitcoin.RPC
 				catch (Exception ex) when (ex is RPCException || ex is NoEstimationException)
 				{
 					Logger.LogTrace(ex);
-					// Hopefully Bitcoin Core brainfart: https://github.com/bitcoin/bitcoin/issues/14431
+					// Hopefully Groestlcoin Core brainfart: https://github.com/bitcoin/bitcoin/issues/14431
 					for (int i = 2; i <= Constants.SevenDaysConfirmationTarget; i++)
 					{
 						try
@@ -75,7 +75,7 @@ namespace NBitcoin.RPC
 
 		public static async Task<EstimateSmartFeeResponse> TryEstimateSmartFeeAsync(this RPCClient rpc, int confirmationTarget, EstimateSmartFeeMode estimateMode = EstimateSmartFeeMode.Conservative, bool simulateIfRegTest = false, bool tryOtherFeeRates = false)
 		{
-			if (simulateIfRegTest && rpc.Network == Network.RegTest)
+			if (simulateIfRegTest && rpc.Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 			{
 				return SimulateRegTestFeeEstimation(confirmationTarget, estimateMode);
 			}
@@ -89,7 +89,7 @@ namespace NBitcoin.RPC
 				}
 				else
 				{
-					// Hopefully Bitcoin Core brainfart: https://github.com/bitcoin/bitcoin/issues/14431
+					// Hopefully Groestlcoin Core brainfart: https://github.com/bitcoin/bitcoin/issues/14431
 					for (int i = 2; i <= Constants.SevenDaysConfirmationTarget; i++)
 					{
 						response = await rpc.TryEstimateSmartFeeAsync(i, estimateMode);

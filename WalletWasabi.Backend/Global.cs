@@ -113,40 +113,40 @@ namespace WalletWasabi.Backend
 				var blockchainInfo = await RpcClient.GetBlockchainInfoAsync();
 
 				var blocks = blockchainInfo.Blocks;
-				if (blocks == 0 && Config.Network != Network.RegTest)
+				if (blocks == 0 && Config.Network != NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 				{
 					throw new NotSupportedException($"{nameof(blocks)} == 0");
 				}
 
 				var headers = blockchainInfo.Headers;
-				if (headers == 0 && Config.Network != Network.RegTest)
+				if (headers == 0 && Config.Network != NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 				{
 					throw new NotSupportedException($"{nameof(headers)} == 0");
 				}
 
 				if (blocks != headers)
 				{
-					throw new NotSupportedException("Bitcoin Core is not fully synchronized.");
+					throw new NotSupportedException("Groestlcoin Core is not fully synchronized.");
 				}
 
-				Logger.LogInfo("Bitcoin Core is fully synchronized.");
+				Logger.LogInfo("Groestlcoin Core is fully synchronized.");
 
 				var estimateSmartFeeResponse = await RpcClient.TryEstimateSmartFeeAsync(2, EstimateSmartFeeMode.Conservative, simulateIfRegTest: true, tryOtherFeeRates: true);
 				if (estimateSmartFeeResponse is null)
 				{
-					throw new NotSupportedException("Bitcoin Core cannot estimate network fees yet.");
+					throw new NotSupportedException("Groestlcoin Core cannot estimate network fees yet.");
 				}
 
-				Logger.LogInfo("Bitcoin Core fee estimation is working.");
+				Logger.LogInfo("Groestlcoin Core fee estimation is working.");
 
-				if (Config.Network == Network.RegTest) // Make sure there's at least 101 block, if not generate it
+				if (Config.Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest) // Make sure there's at least 101 block, if not generate it
 				{
 					if (blocks < 101)
 					{
 						var generateBlocksResponse = await RpcClient.GenerateAsync(101);
 						if (generateBlocksResponse is null)
 						{
-							throw new NotSupportedException($"Bitcoin Core cannot generate blocks on the {Network.RegTest}.");
+							throw new NotSupportedException($"Groestlcoin Core cannot generate blocks on the {NBitcoin.Altcoins.Groestlcoin.Instance.Regtest}.");
 						}
 
 						blockchainInfo = await RpcClient.GetBlockchainInfoAsync();
@@ -155,13 +155,13 @@ namespace WalletWasabi.Backend
 						{
 							throw new NotSupportedException($"{nameof(blocks)} == 0");
 						}
-						Logger.LogInfo($"Generated 101 block on {Network.RegTest}. Number of blocks {blocks}.");
+						Logger.LogInfo($"Generated 101 block on {NBitcoin.Altcoins.Groestlcoin.Instance.Regtest}. Number of blocks {blocks}.");
 					}
 				}
 			}
 			catch (WebException)
 			{
-				Logger.LogError($"Bitcoin Core is not running, or incorrect RPC credentials, or network is given in the config file: `{Config.FilePath}`.");
+				Logger.LogError($"Groestlcoin Core is not running, or incorrect RPC credentials, or network is given in the config file: `{Config.FilePath}`.");
 				throw;
 			}
 		}

@@ -27,19 +27,19 @@ namespace WalletWasabi.Tests.UnitTests
 		[Fact]
 		public void StartingHeaderTests()
 		{
-			var startingMain = SmartHeader.GetStartingHeader(Network.Main);
-			var startingTest = SmartHeader.GetStartingHeader(Network.TestNet);
-			var startingReg = SmartHeader.GetStartingHeader(Network.RegTest);
+			var startingMain = SmartHeader.GetStartingHeader(NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet);
+			var startingTest = SmartHeader.GetStartingHeader(NBitcoin.Altcoins.Groestlcoin.Instance.Testnet);
+			var startingReg = SmartHeader.GetStartingHeader(NBitcoin.Altcoins.Groestlcoin.Instance.Regtest);
 
-			var expectedHashMain = new uint256("0000000000000000001c8018d9cb3b742ef25114f27563e3fc4a1902167f9893");
-			var expectedPrevHashMain = new uint256("000000000000000000cbeff0b533f8e1189cf09dfbebf57a8ebe349362811b80");
+			var expectedHashMain = new uint256("0000000019972e461d5c8d1c60108bcb299d274ade2be8194e0f0da6b16c7ead");
+			var expectedPrevHashMain = new uint256("00000000001937123368f42f9843ecf1d6835f449674e00d3c40d158d91f3dbe");
 			uint expectedHeightMain = 481824;
-			var expectedTimeMain = DateTimeOffset.FromUnixTimeSeconds(1503539857);
+			var expectedTimeMain = DateTimeOffset.FromUnixTimeSeconds(1424704328);
 
-			var expectedHashTest = new uint256("00000000000f0d5edcaeba823db17f366be49a80d91d15b77747c2e017b8c20a");
-			var expectedPrevHashTest = new uint256("0000000000211a4d54bceb763ea690a4171a734c48d36f7d8e30b51d6df6ea85");
+			var expectedHashTest = new uint256("0000008df6e4f82cc6f1c71d461bf739e0e20a44e19e5535feabcfb79acc6136");
+			var expectedPrevHashTest = new uint256("0000000f8846debf66f5c5df0d8985800ad4ea21b557a5d01dc34b94eaa3ac70");
 			uint expectedHeightTest = 828575;
-			var expectedTimeTest = DateTimeOffset.FromUnixTimeSeconds(1463079943);
+			var expectedTimeTest = DateTimeOffset.FromUnixTimeSeconds(1541082333);
 
 			var expectedHashReg = Network.RegTest.GenesisHash;
 			var expectedPrevHashReg = uint256.Zero;

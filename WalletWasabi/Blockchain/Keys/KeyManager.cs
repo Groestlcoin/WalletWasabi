@@ -66,7 +66,7 @@ namespace WalletWasabi.Blockchain.Keys
 		// BIP84-ish derivation scheme
 		// m / purpose' / coin_type' / account' / change / address_index
 		// https://github.com/bitcoin/bips/blob/master/bip-0084.mediawiki
-		public static readonly KeyPath DefaultAccountKeyPath = new KeyPath("m/84h/0h/0h");
+		public static readonly KeyPath DefaultAccountKeyPath = new KeyPath("m/84h/17h/0h");
 
 		public string FilePath { get; private set; }
 		private object ToFileLock { get; }
@@ -143,7 +143,7 @@ namespace WalletWasabi.Blockchain.Keys
 
 			mnemonic = new Mnemonic(Wordlist.English, WordCount.Twelve);
 			ExtKey extKey = mnemonic.DeriveExtKey(password);
-			var encryptedSecret = extKey.PrivateKey.GetEncryptedBitcoinSecret(password, Network.Main);
+			var encryptedSecret = extKey.PrivateKey.GetEncryptedBitcoinSecret(password, NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet);
 
 			HDFingerprint masterFingerprint = extKey.Neuter().PubKey.GetHDFingerPrint();
 			KeyPath keyPath = DefaultAccountKeyPath;
@@ -170,7 +170,7 @@ namespace WalletWasabi.Blockchain.Keys
 			}
 
 			ExtKey extKey = mnemonic.DeriveExtKey(password);
-			var encryptedSecret = extKey.PrivateKey.GetEncryptedBitcoinSecret(password, Network.Main);
+			var encryptedSecret = extKey.PrivateKey.GetEncryptedBitcoinSecret(password, NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet);
 
 			HDFingerprint masterFingerprint = extKey.Neuter().PubKey.GetHDFingerPrint();
 
@@ -329,7 +329,7 @@ namespace WalletWasabi.Blockchain.Keys
 				return false;
 			}
 
-			encryptedSecret = new BitcoinEncryptedSecretNoEC(encsec);
+			encryptedSecret = new BitcoinEncryptedSecretNoEC(encsec, NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet);
 			return true;
 		}
 

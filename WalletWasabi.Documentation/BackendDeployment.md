@@ -7,12 +7,12 @@ sudo apt-get update && cd ~/WalletWasabi && git pull && cd ~
 sudo service nginx stop
 sudo systemctl stop walletwasabi.service
 sudo killall tor
-bitcoin-cli stop
+groestlcoin-cli stop
 sudo apt-get upgrade -y && sudo apt-get autoremove -y
 sudo reboot
 set DOTNET_CLI_TELEMETRY_OPTOUT=1
-bitcoind
-bitcoin-cli getblockchaininfo
+groestlcoind
+groestlcoin-cli getblockchaininfo
 tor
 sudo service nginx start
 dotnet publish ~/WalletWasabi/WalletWasabi.Backend --configuration Release --self-contained false
@@ -138,16 +138,16 @@ sudo ufw allow 80
 
 **Backup the generated private key!**
 
-# 5. Install, Configure and Synchronize bitcoind
+# 5. Install, Configure and Synchronize groestlcoind
 
-https://bitcoin.org/en/download
+https://www.groestlcoin.org/groestlcoin-core-wallet/
 
 ```sh
-sudo add-apt-repository ppa:bitcoin/bitcoin
+sudo add-apt-repository ppa:groestlcoin/groestlcoin
 sudo apt-get update
-sudo apt-get install bitcoind
-mkdir ~/.bitcoin
-pico ~/.bitcoin/bitcoin.conf
+sudo apt-get install groestlcoind
+mkdir ~/.groestlcoin
+pico ~/.groestlcoin/groestlcoin.conf
 ```
 
 ```sh
@@ -159,9 +159,9 @@ testnet=[0/1]
 
 [main/test].daemon=1
 [main/test].server=1
-[main/test].rpcuser=bitcoinuser
+[main/test].rpcuser=groestlcoinuser
 [main/test].rpcpassword=password
-[main/test].whitebind=127.0.0.1:[8333/18333]
+[main/test].whitebind=127.0.0.1:[1331/11331]
 #[main/test].debug=rpc     # in some cases it could be good to uncomment this line.
 ```
 https://bitcoincore.org/en/releases/0.17.0/  
@@ -170,11 +170,11 @@ https://github.com/MrChrisJ/fullnode/issues/18
 
 ```sh
 sudo ufw allow ssh
-sudo ufw allow [18333/8333]
-bitcoind
-bitcoin-cli getblockcount
-bitcoin-cli stop
-bitcoind
+sudo ufw allow [11331/1331]
+groestlcoind
+groestlcoin-cli getblockcount
+groestlcoin-cli stop
+groestlcoind
 ```
 
 # 6. Publish, Configure and Run WalletWasabi.Backend
@@ -326,21 +326,21 @@ http://www.wasabiwallet.io/
 # Check Statuses
 
 ```sh
-tail -f ~/.bitcoin/debug.log
+tail -f ~/.groestlcoin/debug.log
 tail -10000 .walletwasabi/backend/Logs.txt
 du -bsh .walletwasabi/backend/IndexBuilderService/*
 ```
 
 # Additional (optional) Settings
 
-## Rolling Bitcoin Core node debug logs
+## Rolling Groestlcoin Core node debug logs
 
 The following command line adds a configuration file to let logrotate service know
 how to rotate the bitcoin debug logs.
 
 ```sh
 sudo tee -a /etc/logrotate.d/bitcoin <<EOS
-/home/user/.bitcoin/debug.log
+/home/user/.groestlcoin/debug.log
 {
         su user user
         rotate 5
@@ -355,7 +355,7 @@ sudo tee -a /etc/logrotate.d/bitcoin <<EOS
 EOS
 ```
 
-**Note:** In test server replace the first line by the following one `/home/user/.bitcoin/testnet3/debug.log`
+**Note:** In test server replace the first line by the following one `/home/user/.groestlcoin/testnet3/debug.log`
 
 ## Welcome Banner
 

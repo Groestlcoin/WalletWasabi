@@ -200,7 +200,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 
 				SmartTransaction transaction;
 
-				if (PSBT.TryParse(TransactionString, Global.Network ?? Network.Main, out var signedPsbt))
+				if (PSBT.TryParse(TransactionString, Global.Network ?? NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet, out var signedPsbt))
 				{
 					if (!signedPsbt.IsAllFinalized())
 					{
@@ -211,7 +211,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				}
 				else
 				{
-					transaction = new SmartTransaction(Transaction.Parse(TransactionString, Global.Network ?? Network.Main), WalletWasabi.Models.Height.Unknown);
+					transaction = new SmartTransaction(Transaction.Parse(TransactionString, Global.Network ?? NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet), WalletWasabi.Models.Height.Unknown);
 				}
 
 				MainWindowViewModel.Instance.StatusBar.TryAddStatus(StatusType.BroadcastingTransaction);

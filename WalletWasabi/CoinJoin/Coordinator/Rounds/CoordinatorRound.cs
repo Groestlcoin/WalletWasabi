@@ -186,7 +186,7 @@ namespace WalletWasabi.CoinJoin.Coordinator.Rounds
 				Bobs = new List<Bob>();
 
 				Logger.LogInfo($"New round ({RoundId}) is created.\n\t" +
-					$"BaseDenomination: {MixingLevels.GetBaseDenomination().ToString(false, true)} BTC.\n\t" +
+					$"BaseDenomination: {MixingLevels.GetBaseDenomination().ToString(false, true)} GRS.\n\t" +
 					$"{nameof(AdjustedConfirmationTarget)}: {AdjustedConfirmationTarget}.\n\t" +
 					$"{nameof(CoordinatorFeePercent)}: {CoordinatorFeePercent}%.\n\t" +
 					$"{nameof(AnonymitySet)}: {AnonymitySet}.");
@@ -1072,17 +1072,17 @@ namespace WalletWasabi.CoinJoin.Coordinator.Rounds
 					{
 						Coin[] spentCoins = Alices.SelectMany(x => x.Inputs).ToArray();
 						Money networkFee = CoinJoin.GetFee(spentCoins);
-						Logger.LogInfo($"Round ({RoundId}): Network Fee: {networkFee.ToString(false, false)} BTC.");
-						Logger.LogInfo($"Round ({RoundId}): Coordinator Fee: {CoinJoin.Outputs.SingleOrDefault(x => x.ScriptPubKey == Constants.GetCoordinatorAddress(Network).ScriptPubKey)?.Value?.ToString(false, false) ?? "0"} BTC.");
+						Logger.LogInfo($"Round ({RoundId}): Network Fee: {networkFee.ToString(false, false)} GRS.");
+						Logger.LogInfo($"Round ({RoundId}): Coordinator Fee: {CoinJoin.Outputs.SingleOrDefault(x => x.ScriptPubKey == Constants.GetCoordinatorAddress(Network).ScriptPubKey)?.Value?.ToString(false, false) ?? "0"} GRS.");
 						FeeRate feeRate = CoinJoin.GetFeeRate(spentCoins);
-						Logger.LogInfo($"Round ({RoundId}): Network Fee Rate: {feeRate.FeePerK.ToDecimal(MoneyUnit.Satoshi) / 1000} sat/vByte.");
+						Logger.LogInfo($"Round ({RoundId}): Network Fee Rate: {feeRate.FeePerK.ToDecimal(MoneyUnit.Satoshi) / 1000} gro/vByte.");
 						Logger.LogInfo($"Round ({RoundId}): Number of inputs: {CoinJoin.Inputs.Count}.");
 						Logger.LogInfo($"Round ({RoundId}): Number of outputs: {CoinJoin.Outputs.Count}.");
 						Logger.LogInfo($"Round ({RoundId}): Serialized Size: {CoinJoin.GetSerializedSize() / 1024} KB.");
 						Logger.LogInfo($"Round ({RoundId}): VSize: {CoinJoin.GetVirtualSize() / 1024} KB.");
 						foreach (var o in CoinJoin.GetIndistinguishableOutputs(includeSingle: false))
 						{
-							Logger.LogInfo($"Round ({RoundId}): There are {o.count} occurrences of {o.value.ToString(true, false)} BTC output.");
+							Logger.LogInfo($"Round ({RoundId}): There are {o.count} occurrences of {o.value.ToString(true, false)} GRS output.");
 						}
 
 						await RpcClient.SendRawTransactionAsync(CoinJoin).ConfigureAwait(false);

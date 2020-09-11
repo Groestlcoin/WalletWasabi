@@ -39,9 +39,9 @@
     <!-- any comments -->
     <Property Id='ARPCOMMENTS'>!(loc.Description)</Property>
     <!-- URL for technical support -->
-    <Property Id='ARPHELPLINK'>https://www.reddit.com/r/WasabiWallet/</Property>
+    <Property Id='ARPHELPLINK'>https://www.reddit.com/r/Groestlcoin/</Property>
     <!-- URL for general info about the product -->
-    <Property Id="ARPURLINFOABOUT">https://github.com/zkSNACKs/WalletWasabi/</Property>
+    <Property Id="ARPURLINFOABOUT">https://github.com/Groestlcoin/WalletWasabi/</Property>
     <!-- Use the icon.ico icon for this installer. -->
     <Property Id="ARPPRODUCTICON">icon.ico</Property>
     <!-- To suppress the Repair functionality, use: -->
@@ -63,7 +63,7 @@
     </UI>
 
     <!-- Define components, shortcuts, files, etc... for instealler. -->
-    <Feature Id="ProductFeature" Title="Wasabi" Level="1">
+    <Feature Id="ProductFeature" Title="GroestlMix" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
       <ComponentGroupRef Id="PublishedComponents" />
     </Feature>

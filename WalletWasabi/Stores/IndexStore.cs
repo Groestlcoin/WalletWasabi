@@ -65,7 +65,7 @@ namespace WalletWasabi.Stores
 
 					await EnsureBackwardsCompatibilityAsync().ConfigureAwait(false);
 
-					if (Network == Network.RegTest)
+					if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 					{
 						MatureIndexFileManager.DeleteMe(); // RegTest is not a global ledger, better to delete it.
 						ImmatureIndexFileManager.DeleteMe();
@@ -207,7 +207,7 @@ namespace WalletWasabi.Stores
 			try
 			{
 				// Before Wasabi 1.1.5
-				var oldIndexFilePath = Path.Combine(EnvironmentHelpers.GetDataDir(Path.Combine("WalletWasabi", "Client")), $"Index{Network}.dat");
+				var oldIndexFilePath = Path.Combine(EnvironmentHelpers.GetDataDir(Path.Combine("GroestlMix", "Client")), $"Index{Network}.dat");
 
 				// Before Wasabi 1.1.6
 				var oldFileNames = new[]
@@ -218,7 +218,7 @@ namespace WalletWasabi.Stores
 					"MatureIndex.dat.dig"
 				};
 
-				var oldIndexFolderPath = Path.Combine(EnvironmentHelpers.GetDataDir(Path.Combine("WalletWasabi", "Client")), "BitcoinStore", Network.ToString());
+				var oldIndexFolderPath = Path.Combine(EnvironmentHelpers.GetDataDir(Path.Combine("GroestlMix", "Client")), "BitcoinStore", Network.ToString());
 
 				foreach (var fileName in oldFileNames)
 				{

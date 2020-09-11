@@ -346,7 +346,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				catch (InsufficientBalanceException ex)
 				{
 					Money needed = ex.Minimum - ex.Actual;
-					NotificationHelpers.Error($"Not enough coins selected. You need an estimated {needed.ToString(false, true)} BTC more to make this transaction.", "");
+					NotificationHelpers.Error($"Not enough coins selected. You need an estimated {needed.ToString(false, true)} GRS more to make this transaction.", "");
 				}
 				catch (HttpRequestException ex)
 				{
@@ -409,7 +409,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		{
 			if (amount == Money.Zero)
 			{
-				AmountWatermarkText = "Amount (BTC)";
+				AmountWatermarkText = "Amount (GRS)";
 			}
 			else
 			{
@@ -424,8 +424,8 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				}
 
 				AmountWatermarkText = amountUsd != 0
-					? $"Amount (BTC) ~ ${amountUsd}"
-					: "Amount (BTC)";
+					? $"Amount (GRS) ~ ${amountUsd}"
+					: "Amount (GRS)";
 			}
 		}
 
@@ -579,18 +579,18 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					switch (FeeDisplayFormat)
 					{
 						case FeeDisplayFormat.SatoshiPerByte:
-							FeeText = $"(~ {FeeRate.SatoshiPerByte} sat/vByte)";
-							FeeToolTip = "Expected fee rate in satoshi/vByte.";
+							FeeText = $"(~ {FeeRate.SatoshiPerByte} gro/vByte)";
+							FeeToolTip = "Expected fee rate in gro/vByte.";
 							break;
 
 						case FeeDisplayFormat.USD:
-							FeeText = $"(~ ${UsdFee.ToString("0.##")})";
-							FeeToolTip = $"Estimated total fees in USD. Exchange Rate: {(long)UsdExchangeRate} BTC/USD.";
+							FeeText = $"(~ ${UsdFee.ToString("0.##########")})";
+							FeeToolTip = $"Estimated total fees in USD. Exchange Rate: {(long)UsdExchangeRate} GRS/USD.";
 							break;
 
 						case FeeDisplayFormat.BTC:
-							FeeText = $"(~ {EstimatedBtcFee.ToString(false, false)} BTC)";
-							FeeToolTip = "Estimated total fees in BTC.";
+							FeeText = $"(~ {EstimatedBtcFee.ToString(false, false)} GRS)";
+							FeeToolTip = "Estimated total fees in GRS.";
 							break;
 
 						case FeeDisplayFormat.Percentage:

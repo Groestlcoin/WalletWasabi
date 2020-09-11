@@ -9,7 +9,7 @@ namespace WalletWasabi.Gui
 	{
 		public App()
 		{
-			Name = "Wasabi Wallet";
+			Name = "GroestlMix Wallet";
 
 			DataContext = new ApplicationViewModel();
 		}

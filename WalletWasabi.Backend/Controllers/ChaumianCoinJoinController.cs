@@ -32,7 +32,7 @@ namespace WalletWasabi.Backend.Controllers
 	/// To interact with the Chaumian CoinJoin Coordinator.
 	/// </summary>
 	[Produces("application/json")]
-	[Route("api/v" + Constants.BackendMajorVersion + "/btc/[controller]")]
+	[Route("api/v" + Constants.BackendMajorVersion + "/grs/[controller]")]
 	public class ChaumianCoinJoinController : Controller
 	{
 		private IMemoryCache Cache { get; }
@@ -48,7 +48,7 @@ namespace WalletWasabi.Backend.Controllers
 		}
 
 		/// <summary>
-		/// Satoshi gets various status information.
+		/// Gro gets various status information.
 		/// </summary>
 		/// <returns>List of CcjRunningRoundStatus (Phase, Denomination, RegisteredPeerCount, RequiredPeerCount, MaximumInputCountPerPeer, FeePerInputs, FeePerOutputs, CoordinatorFeePercent, RoundId, SuccessfulRoundCount)</returns>
 		/// <response code="200">List of CcjRunningRoundStatus (Phase, Denomination, RegisteredPeerCount, RequiredPeerCount, MaximumInputCountPerPeer, FeePerInputs, FeePerOutputs, CoordinatorFeePercent, RoundId, SuccessfulRoundCount)</response>
@@ -149,7 +149,7 @@ namespace WalletWasabi.Backend.Controllers
 					if (request.ChangeOutputAddress.Network != Network)
 					{
 						// RegTest and TestNet address formats are sometimes the same.
-						if (Network == Network.Main)
+						if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 						{
 							return BadRequest($"Invalid ChangeOutputAddress Network.");
 						}
@@ -272,7 +272,7 @@ namespace WalletWasabi.Backend.Controllers
 					Money changeAmount = (inputSum - (round.MixingLevels.GetBaseDenomination() + networkFeeToPayAfterBaseDenomination));
 					if (changeAmount < Money.Zero)
 					{
-						return BadRequest($"Not enough inputs are provided. Fee to pay: {networkFeeToPayAfterBaseDenomination.ToString(false, true)} BTC. Round denomination: {round.MixingLevels.GetBaseDenomination().ToString(false, true)} BTC. Only provided: {inputSum.ToString(false, true)} BTC.");
+						return BadRequest($"Not enough inputs are provided. Fee to pay: {networkFeeToPayAfterBaseDenomination.ToString(false, true)} GRS. Round denomination: {round.MixingLevels.GetBaseDenomination().ToString(false, true)} GRS. Only provided: {inputSum.ToString(false, true)} GRS.");
 					}
 					acceptedBlindedOutputScripts.Add(blindedOutputs.First());
 
@@ -530,7 +530,7 @@ namespace WalletWasabi.Backend.Controllers
 			if (request.OutputAddress.Network != Network)
 			{
 				// RegTest and TestNet address formats are sometimes the same.
-				if (Network == Network.Main)
+				if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 				{
 					return BadRequest($"Invalid OutputAddress Network.");
 				}

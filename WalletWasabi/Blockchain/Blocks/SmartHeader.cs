@@ -31,22 +31,22 @@ namespace WalletWasabi.Blockchain.Blocks
 		#region SpecialHeaders
 
 		private static SmartHeader StartingHeaderMain { get; } = new SmartHeader(
-			new uint256("0000000000000000001c8018d9cb3b742ef25114f27563e3fc4a1902167f9893"),
-			new uint256("000000000000000000cbeff0b533f8e1189cf09dfbebf57a8ebe349362811b80"),
+			new uint256("0000000019972e461d5c8d1c60108bcb299d274ade2be8194e0f0da6b16c7ead"),
+			new uint256("000000001c1cb3a90a4e57cc9b1f8bbfa7b3501588af054b2e545fcd6d2e8b51"),
 			481824,
-			DateTimeOffset.FromUnixTimeSeconds(1503539857));
+			DateTimeOffset.FromUnixTimeSeconds(1424703945));
 
 		private static SmartHeader StartingHeaderTestNet { get; } = new SmartHeader(
-			new uint256("00000000000f0d5edcaeba823db17f366be49a80d91d15b77747c2e017b8c20a"),
-			new uint256("0000000000211a4d54bceb763ea690a4171a734c48d36f7d8e30b51d6df6ea85"),
+			new uint256("0000008df6e4f82cc6f1c71d461bf739e0e20a44e19e5535feabcfb79acc6136"),
+			new uint256("000000a3ac8ba4b3a313ed37d951ce51d5720d1152b89635d3038f74f4ec4cc4"),
 			828575,
-			DateTimeOffset.FromUnixTimeSeconds(1463079943));
+			DateTimeOffset.FromUnixTimeSeconds(1541082333));
 
 		private static SmartHeader StartingHeaderRegTest { get; } = new SmartHeader(
-			Network.RegTest.GenesisHash,
-			Network.RegTest.GetGenesis().Header.HashPrevBlock,
+			NBitcoin.Altcoins.Groestlcoin.Instance.Regtest.GenesisHash,
+			NBitcoin.Altcoins.Groestlcoin.Instance.Regtest.GetGenesis().Header.HashPrevBlock,
 			0,
-			Network.RegTest.GetGenesis().Header.BlockTime);
+			NBitcoin.Altcoins.Groestlcoin.Instance.Regtest.GetGenesis().Header.BlockTime);
 
 		/// <summary>
 		/// Where the first possible bech32 transaction ever can be found.

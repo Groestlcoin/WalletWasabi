@@ -29,7 +29,7 @@ namespace WalletWasabi.Blockchain.Keys
 
 		public BlockchainState()
 		{
-			Network = Network.Main;
+			Network = NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet;
 			Height = 0;
 		}
 	}

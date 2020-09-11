@@ -161,7 +161,7 @@ namespace WalletWasabi.Blockchain.Transactions
 			{
 				throw new InvalidOperationException("Impossible to get the fees of the PSBT, this should never happen.");
 			}
-			Logger.LogInfo($"Fee: {fee.Satoshi} Satoshi.");
+			Logger.LogInfo($"Fee: {fee.Satoshi} Gro.");
 
 			var vSize = builder.EstimateSize(psbt.GetOriginalTransaction(), true);
 			Logger.LogInfo($"Estimated tx size: {vSize} vBytes.");
@@ -191,8 +191,8 @@ namespace WalletWasabi.Blockchain.Transactions
 			if (feePc > 1)
 			{
 				Logger.LogInfo($"The transaction fee is {totalOutgoingAmountNoFee:0.#}% of your transaction amount.{Environment.NewLine}"
-					+ $"Sending:\t {totalSendAmount.ToString(fplus: false, trimExcessZero: true)} BTC.{Environment.NewLine}"
-					+ $"Fee:\t\t {fee.Satoshi} Satoshi.");
+					+ $"Sending:\t {totalSendAmount.ToString(fplus: false, trimExcessZero: true)} GRS.{Environment.NewLine}"
+					+ $"Fee:\t\t {fee.Satoshi} Gro.");
 			}
 			if (feePc > 100)
 			{

@@ -17,10 +17,10 @@ using WalletWasabi.Models;
 namespace WalletWasabi.Backend.Controllers
 {
 	/// <summary>
-	/// To interact with the Bitcoin Blockchain.
+	/// To interact with the Groestlcoin Blockchain.
 	/// </summary>
 	[Produces("application/json")]
-	[Route("api/v" + Constants.BackendMajorVersion + "/btc/[controller]")]
+	[Route("api/v" + Constants.BackendMajorVersion + "/grs/[controller]")]
 	public class BlockchainController : Controller
 	{
 		private IMemoryCache Cache { get; }
@@ -36,7 +36,7 @@ namespace WalletWasabi.Backend.Controllers
 		}
 
 		/// <summary>
-		/// Get fees for the requested confirmation targets based on Bitcoin Core's estimatesmartfee output.
+		/// Get fees for the requested confirmation targets based on Groestlcoin Core's estimatesmartfee output.
 		/// </summary>
 		/// <remarks>
 		/// Sample request:
@@ -112,7 +112,7 @@ namespace WalletWasabi.Backend.Controllers
 		///     GET /fees/ECONOMICAL
 		///
 		/// </remarks>
-		/// <param name="estimateSmartFeeMode">Bitcoin Core's estimatesmartfee mode: ECONOMICAL/CONSERVATIVE.</param>
+		/// <param name="estimateSmartFeeMode">Groestlcoin Core's estimatesmartfee mode: ECONOMICAL/CONSERVATIVE.</param>
 		/// <returns>A dictionary of fee targets and estimations.</returns>
 		/// <response code="200">A dictionary of fee targets and estimations.</response>
 		/// <response code="400">Invalid estimation mode is provided, possible values: ECONOMICAL/CONSERVATIVE.</response>

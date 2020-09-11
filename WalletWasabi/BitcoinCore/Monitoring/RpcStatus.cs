@@ -25,21 +25,21 @@ namespace WalletWasabi.BitcoinCore.Monitoring
 				var diff = headers - blocks;
 				if (peersCount == 0)
 				{
-					Status = "Bitcoin Core is connecting...";
+					Status = "Groestlcoin Core is connecting...";
 				}
 				else if (diff == 0)
 				{
 					Synchronized = true;
-					Status = "Bitcoin Core is synchronized";
+					Status = "Groestlcoin Core is synchronized";
 				}
 				else
 				{
-					Status = $"Bitcoin Core is downloading {diff} blocks...";
+					Status = $"Groestlcoin Core is downloading {diff} blocks...";
 				}
 			}
 			else
 			{
-				Status = "Bitcoin Core is unresponsive";
+				Status = "Groestlcoin Core is unresponsive";
 			}
 
 			Success = success;

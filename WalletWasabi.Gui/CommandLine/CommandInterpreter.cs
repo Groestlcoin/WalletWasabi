@@ -25,13 +25,13 @@ namespace WalletWasabi.Gui.CommandLine
 			}
 
 			OptionSet options = null;
-			var suite = new CommandSet("wassabee")
+			var suite = new CommandSet("groestlmix")
 			{
-				"Usage: wassabee [OPTIONS]+",
-				"Launches Wasabi Wallet.",
+				"Usage: groestlmix [OPTIONS]+",
+				"Launches GroestlMix Wallet.",
 				"",
 				{ "h|help", "Displays help page and exit.", x => showHelp = x != null },
-				{ "v|version", "Displays Wasabi version and exit.", x => showVersion = x != null },
+				{ "v|version", "Displays GroestlMix version and exit.", x => showVersion = x != null },
 				"",
 				"Available commands are:",
 				"",
@@ -70,9 +70,9 @@ namespace WalletWasabi.Gui.CommandLine
 
 		private static void ShowVersion()
 		{
-			Console.WriteLine($"Wasabi Client Version: {Constants.ClientVersion}");
+			Console.WriteLine($"GroestlMix Client Version: {Constants.ClientVersion}");
 			Console.WriteLine($"Compatible Coordinator Version: {Constants.BackendMajorVersion}");
-			Console.WriteLine($"Compatible Bitcoin Core Version: {Constants.BitcoinCoreVersion}");
+			Console.WriteLine($"Compatible Groestlcoin Core Version: {Constants.BitcoinCoreVersion}");
 			Console.WriteLine($"Compatible Hardware Wallet Interface Version: {Constants.HwiVersion}");
 		}
 
@@ -80,8 +80,8 @@ namespace WalletWasabi.Gui.CommandLine
 		{
 			ShowVersion();
 			Console.WriteLine();
-			Console.WriteLine("Usage: wassabee [OPTIONS]+");
-			Console.WriteLine("Launches Wasabi Wallet.");
+			Console.WriteLine("Usage: groestlmix [OPTIONS]+");
+			Console.WriteLine("Launches GroestlMix Wallet.");
 			Console.WriteLine();
 			Console.WriteLine("Options:");
 			p.WriteOptionDescriptions(Console.Out);

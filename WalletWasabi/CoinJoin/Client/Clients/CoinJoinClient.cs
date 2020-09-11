@@ -250,7 +250,7 @@ namespace WalletWasabi.CoinJoin.Client.Clients
 
 				int delaySeconds = new Random().Next(0, 7); // delay the response to defend timing attack privacy.
 
-				if (Network == Network.RegTest)
+				if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 				{
 					delaySeconds = 0;
 				}
@@ -384,7 +384,7 @@ namespace WalletWasabi.CoinJoin.Client.Clients
 			if (amountBack < minAmountBack && !amountBack.Almost(minAmountBack, Money.Satoshis(1000))) // Just in case. Rounding error maybe?
 			{
 				Money diff = minAmountBack - amountBack;
-				throw new NotSupportedException($"Coordinator did not add enough value to our outputs in the coinjoin. Missing: {diff.Satoshi} satoshis.");
+				throw new NotSupportedException($"Coordinator did not add enough value to our outputs in the coinjoin. Missing: {diff.Satoshi} gros.");
 			}
 
 			var signedCoinJoin = unsignedCoinJoin.Clone();

@@ -31,7 +31,7 @@ namespace NBitcoin
 			await node.SendMessageAsync(getdata).ConfigureAwait(false);
 			cancellationToken.ThrowIfCancellationRequested();
 
-			// Bitcoin Core processes the messages sequentially and does not send a NOTFOUND message if the remote node is pruned and the data not available.
+			// Groestlcoin Core processes the messages sequentially and does not send a NOTFOUND message if the remote node is pruned and the data not available.
 			// A good way to get any feedback about whether the node knows the block or not is to send a ping request.
 			// If block is not known by the remote node, the pong will be sent immediately, else it will be sent after the block download.
 			ulong pingNonce = RandomUtils.GetUInt64();
@@ -240,7 +240,7 @@ namespace NBitcoin
 		public static string ToZpub(this ExtPubKey extPubKey, Network network)
 		{
 			var data = extPubKey.ToBytes();
-			var version = (network == Network.Main)
+			var version = (network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 				? new byte[] { (0x04), (0xB2), (0x47), (0x46) }
 				: new byte[] { (0x04), (0x5F), (0x1C), (0xF6) };
 
@@ -250,7 +250,7 @@ namespace NBitcoin
 		public static string ToZPrv(this ExtKey extKey, Network network)
 		{
 			var data = extKey.ToBytes();
-			var version = (network == Network.Main)
+			var version = (network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 				? new byte[] { (0x04), (0xB2), (0x43), (0x0C) }
 				: new byte[] { (0x04), (0x5F), (0x18), (0xBC) };
 

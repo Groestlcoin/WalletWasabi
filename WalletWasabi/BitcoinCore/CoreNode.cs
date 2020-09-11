@@ -53,12 +53,12 @@ namespace WalletWasabi.BitcoinCore
 				coreNode.Network = coreNodeParams.Network;
 				coreNode.MempoolService = coreNodeParams.MempoolService;
 
-				var configPath = Path.Combine(coreNode.DataDir, "bitcoin.conf");
+				var configPath = Path.Combine(coreNode.DataDir, "groestlcoin.conf");
 				coreNode.Config = new CoreConfig();
 				if (File.Exists(configPath))
 				{
 					var configString = await File.ReadAllTextAsync(configPath).ConfigureAwait(false);
-					coreNode.Config.AddOrUpdate(configString); // Bitcoin Core considers the last entry to be valid.
+					coreNode.Config.AddOrUpdate(configString); // Groestlcoin Core considers the last entry to be valid.
 				}
 				cancel.ThrowIfCancellationRequested();
 
@@ -132,7 +132,7 @@ namespace WalletWasabi.BitcoinCore
 					desiredConfigLines.Add($"{configPrefix}.prune = {coreNodeParams.Prune}");
 				}
 
-				var sectionComment = $"# The following configuration options were added or modified by Wasabi Wallet.";
+				var sectionComment = $"# The following configuration options were added or modified by GroestlMix Wallet.";
 				// If the comment is not already present.
 				// And there would be new config entries added.
 				var throwAwayConfig = new CoreConfig(coreNode.Config);
@@ -154,13 +154,13 @@ namespace WalletWasabi.BitcoinCore
 				// If it isn't already running, then we run it.
 				if (await coreNode.RpcClient.TestAsync().ConfigureAwait(false) is null)
 				{
-					Logger.LogInfo("Bitcoin Core is already running.");
+					Logger.LogInfo("Groestlcoin Core is already running.");
 				}
 				else
 				{
 					coreNode.Bridge = new BitcoindRpcProcessBridge(coreNode.RpcClient, coreNode.DataDir, printToConsole: false);
 					await coreNode.Bridge.StartAsync(cancel).ConfigureAwait(false);
-					Logger.LogInfo("Started Bitcoin Core.");
+					Logger.LogInfo("Started Groestlcoin Core.");
 				}
 				cancel.ThrowIfCancellationRequested();
 
@@ -184,7 +184,7 @@ namespace WalletWasabi.BitcoinCore
 
 			if (exitCode != 0)
 			{
-				throw new BitcoindException($"'bitcoind {arguments}' exited with incorrect exit code: {exitCode}.");
+				throw new BitcoindException($"'groestlcoind {arguments}' exited with incorrect exit code: {exitCode}.");
 			}
 			var firstLine = responseString.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries).First();
 			string versionString = firstLine.Split("version v", StringSplitOptions.RemoveEmptyEntries).Last();
@@ -246,10 +246,10 @@ namespace WalletWasabi.BitcoinCore
 				}
 			}
 
-			Logger.LogInfo("Did not stop Bitcoin Core. Reason:");
+			Logger.LogInfo("Did not stop Groestlcoin Core. Reason:");
 			if (exThrown is null)
 			{
-				Logger.LogInfo("Bitcoin Core was started externally.");
+				Logger.LogInfo("Groestlcoin Core was started externally.");
 			}
 			else
 			{

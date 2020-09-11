@@ -29,7 +29,7 @@ Example: Ubuntu 16.04
 Please consider your privacy, before completing this section.  
 You can find the log file by opening it from the main menu: `File/Open/Logs` File or `File/Open/TorLogs` File.
 
-### Wasabi Version
+### GroestlMix Version
 
-Which wasabi release are you using? Where did you download it from?  
-You can figure out which version you are using from the main menu: `Help/About` or with command line: `wassabee --version`.
+Which groestlmix release are you using? Where did you download it from?  
+You can figure out which version you are using from the main menu: `Help/About` or with command line: `groestlmix --version`.

@@ -33,21 +33,21 @@ namespace WalletWasabi.Gui
 
 		[JsonProperty(PropertyName = "Network")]
 		[JsonConverter(typeof(NetworkJsonConverter))]
-		public Network Network { get; internal set; } = Network.Main;
+		public Network Network { get; internal set; } = NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet;
 
-		[DefaultValue("http://wasabiukrxmkdgve5kynjztuovbg43uxcbcxn6y2okcrsg7gb6jdmbad.onion/")]
+		[DefaultValue("http://6brsrbiinpc32tfc.onion/")]
 		[JsonProperty(PropertyName = "MainNetBackendUriV3", DefaultValueHandling = DefaultValueHandling.Populate)]
 		public string MainNetBackendUriV3 { get; private set; }
 
-		[DefaultValue("http://testwnp3fugjln6vh5vpj7mvq3lkqqwjj3c2aafyu7laxz42kgwh2rad.onion/")]
+		[DefaultValue("http://4ob2v2hpht6krdta.onion/")]
 		[JsonProperty(PropertyName = "TestNetBackendUriV3", DefaultValueHandling = DefaultValueHandling.Populate)]
 		public string TestNetBackendUriV3 { get; private set; }
 
-		[DefaultValue("https://wasabiwallet.io/")]
+		[DefaultValue("https://groestlcoin.org/")]
 		[JsonProperty(PropertyName = "MainNetFallbackBackendUri", DefaultValueHandling = DefaultValueHandling.Populate)]
 		public string MainNetFallbackBackendUri { get; private set; }
 
-		[DefaultValue("https://wasabiwallet.co/")]
+		[DefaultValue("https://groestlcoin.org/")]
 		[JsonProperty(PropertyName = "TestNetFallbackBackendUri", DefaultValueHandling = DefaultValueHandling.Populate)]
 		public string TestNetFallbackBackendUri { get; private set; }
 
@@ -197,15 +197,15 @@ namespace WalletWasabi.Gui
 				return _backendUri;
 			}
 
-			if (Network == Network.Main)
+			if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 			{
 				_backendUri = new Uri(MainNetBackendUriV3);
 			}
-			else if (Network == Network.TestNet)
+			else if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Testnet)
 			{
 				_backendUri = new Uri(TestNetBackendUriV3);
 			}
-			else if (Network == Network.RegTest)
+			else if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 			{
 				_backendUri = new Uri(RegTestBackendUriV3);
 			}
@@ -224,15 +224,15 @@ namespace WalletWasabi.Gui
 				return _fallbackBackendUri;
 			}
 
-			if (Network == Network.Main)
+			if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 			{
 				_fallbackBackendUri = new Uri(MainNetFallbackBackendUri);
 			}
-			else if (Network == Network.TestNet)
+			else if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Testnet)
 			{
 				_fallbackBackendUri = new Uri(TestNetFallbackBackendUri);
 			}
-			else if (Network == Network.RegTest)
+			else if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 			{
 				_fallbackBackendUri = new Uri(RegTestBackendUriV3);
 			}
@@ -251,15 +251,15 @@ namespace WalletWasabi.Gui
 
 		public EndPoint GetBitcoinP2pEndPoint()
 		{
-			if (Network == Network.Main)
+			if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 			{
 				return MainNetBitcoinP2pEndPoint;
 			}
-			else if (Network == Network.TestNet)
+			else if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Testnet)
 			{
 				return TestNetBitcoinP2pEndPoint;
 			}
-			else if (Network == Network.RegTest)
+			else if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 			{
 				return RegTestBitcoinP2pEndPoint;
 			}
@@ -291,15 +291,15 @@ namespace WalletWasabi.Gui
 
 		public void SetP2PEndpoint(EndPoint endPoint)
 		{
-			if (Network == Network.Main)
+			if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 			{
 				MainNetBitcoinP2pEndPoint = endPoint;
 			}
-			else if (Network == Network.TestNet)
+			else if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Testnet)
 			{
 				TestNetBitcoinP2pEndPoint = endPoint;
 			}
-			else if (Network == Network.RegTest)
+			else if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 			{
 				RegTestBitcoinP2pEndPoint = endPoint;
 			}
@@ -311,15 +311,15 @@ namespace WalletWasabi.Gui
 
 		public EndPoint GetP2PEndpoint()
 		{
-			if (Network == Network.Main)
+			if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 			{
 				return MainNetBitcoinP2pEndPoint;
 			}
-			else if (Network == Network.TestNet)
+			else if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Testnet)
 			{
 				return TestNetBitcoinP2pEndPoint;
 			}
-			else if (Network == Network.RegTest)
+			else if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 			{
 				return RegTestBitcoinP2pEndPoint;
 			}

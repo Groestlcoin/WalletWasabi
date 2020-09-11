@@ -32,20 +32,18 @@ namespace WalletWasabi.Gui.Tabs
 		public Version BitcoinCoreVersion => Constants.BitcoinCoreVersion;
 		public Version HwiVersion => Constants.HwiVersion;
 
-		public string ClearnetLink => "https://wasabiwallet.io/";
+		public string ClearnetLink => "https://groestlcoin.org/";
 
-		public string TorLink => "http://wasabiukrxmkdgve5kynjztuovbg43uxcbcxn6y2okcrsg7gb6jdmbad.onion";
+		public string TorLink => "http://6brsrbiinpc32tfc.onion";
 
-		public string SourceCodeLink => "https://github.com/zkSNACKs/WalletWasabi/";
+		public string SourceCodeLink => "https://github.com/Groestlcoin/WalletWasabi/";
 
-		public string StatusPageLink => "https://stats.uptimerobot.com/YQqGyUL8A7";
+		public string CustomerSupportLink => "https://www.reddit.com/r/Groestlcoin/";
 
-		public string CustomerSupportLink => "https://www.reddit.com/r/WasabiWallet/";
+		public string BugReportLink => "https://github.com/Groestlcoin/WalletWasabi/issues/";
 
-		public string BugReportLink => "https://github.com/zkSNACKs/WalletWasabi/issues/";
+		public string FAQLink => "https://groestlcoin.org/forum/";
 
-		public string FAQLink => "https://docs.wasabiwallet.io/FAQ/";
-
-		public string DocsLink => "https://docs.wasabiwallet.io/";
+		public string DocsLink => "https://groestlcoin.org/forum/";
 	}
 }

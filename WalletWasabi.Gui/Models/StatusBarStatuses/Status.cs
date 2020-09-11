@@ -27,8 +27,8 @@ namespace WalletWasabi.Gui.Models.StatusBarStatuses
 			var friendlyName = Type switch
 			{
 				StatusType.Ready => "Ready",
-				StatusType.CriticalUpdate => "THE BACKEND WAS UPGRADED WITH BREAKING CHANGES - PLEASE UPDATE YOUR WASABI WALLET!",
-				StatusType.OptionalUpdate => "A new version of Wasabi Wallet is available.",
+				StatusType.CriticalUpdate => "THE BACKEND WAS UPGRADED WITH BREAKING CHANGES - PLEASE UPDATE YOUR GROESTLMIX WALLET!",
+				StatusType.OptionalUpdate => "A new version of GroestlMix Wallet is available.",
 				StatusType.Connecting => "Connecting...",
 				StatusType.Synchronizing => "Synchronizing...",
 				StatusType.WalletProcessingFilters => "Processing block filters...",

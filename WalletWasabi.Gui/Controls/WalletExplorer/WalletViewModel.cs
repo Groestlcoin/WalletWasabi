@@ -132,7 +132,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					try
 					{
 						Money balance = WalletService.Coins.TotalAmount();
-						Title = $"{Name} ({(global.UiConfig.LurkingWifeMode ? "#########" : balance.ToString(false, true))} BTC)";
+						Title = $"{Name} ({(global.UiConfig.LurkingWifeMode ? "#########" : balance.ToString(false, true))} GRS)";
 					}
 					catch (Exception ex)
 					{

@@ -101,21 +101,21 @@ namespace WalletWasabi.Tests.UnitTests.BitcoinCore
 			ipEndPoint = whiteBind.EndPoint as IPEndPoint;
 			Assert.Equal(IPAddress.Loopback, ipEndPoint.Address);
 			// Default port.
-			Assert.Equal(8333, ipEndPoint.Port);
+			Assert.Equal(1331, ipEndPoint.Port);
 			Assert.Equal(string.Empty, whiteBind.Permissions);
 
 			config.AddOrUpdate("whitebind=foo@127.0.0.1");
 			whiteBind = translator.TryGetWhiteBind();
 			ipEndPoint = whiteBind.EndPoint as IPEndPoint;
 			Assert.Equal(IPAddress.Loopback, ipEndPoint.Address);
-			Assert.Equal(8333, ipEndPoint.Port);
+			Assert.Equal(1331, ipEndPoint.Port);
 			Assert.Equal("foo", whiteBind.Permissions);
 
 			config.AddOrUpdate("whitebind=foo,boo@127.0.0.1");
 			whiteBind = translator.TryGetWhiteBind();
 			ipEndPoint = whiteBind.EndPoint as IPEndPoint;
 			Assert.Equal(IPAddress.Loopback, ipEndPoint.Address);
-			Assert.Equal(8333, ipEndPoint.Port);
+			Assert.Equal(1331, ipEndPoint.Port);
 			Assert.Equal("foo,boo", whiteBind.Permissions);
 
 			config.AddOrUpdate("main.whitebind=@@@");

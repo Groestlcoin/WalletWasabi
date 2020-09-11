@@ -66,19 +66,19 @@ namespace WalletWasabi.Helpers
 			ExtPubKey epk;
 			try
 			{
-				epk = ExtPubKey.Parse(extPubKeyString, Network.Main); // Starts with "ExtPubKey": "xpub...
+				epk = ExtPubKey.Parse(extPubKeyString, NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet); // Starts with "ExtPubKey": "xpub...
 			}
 			catch
 			{
 				try
 				{
-					epk = ExtPubKey.Parse(extPubKeyString, Network.TestNet); // Starts with "ExtPubKey": "xpub...
+					epk = ExtPubKey.Parse(extPubKeyString, NBitcoin.Altcoins.Groestlcoin.Instance.Testnet); // Starts with "ExtPubKey": "xpub...
 				}
 				catch
 				{
 					try
 					{
-						epk = ExtPubKey.Parse(extPubKeyString, Network.RegTest); // Starts with "ExtPubKey": "xpub...
+						epk = ExtPubKey.Parse(extPubKeyString, NBitcoin.Altcoins.Groestlcoin.Instance.Regtest); // Starts with "ExtPubKey": "xpub...
 					}
 					catch
 					{
@@ -98,17 +98,17 @@ namespace WalletWasabi.Helpers
 			BitcoinAddress ba;
 			try
 			{
-				ba = BitcoinAddress.Create(bitcoinAddressString, Network.Main);
+				ba = BitcoinAddress.Create(bitcoinAddressString, NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet);
 			}
 			catch
 			{
 				try
 				{
-					ba = BitcoinAddress.Create(bitcoinAddressString, Network.TestNet);
+					ba = BitcoinAddress.Create(bitcoinAddressString, NBitcoin.Altcoins.Groestlcoin.Instance.Testnet);
 				}
 				catch
 				{
-					ba = BitcoinAddress.Create(bitcoinAddressString, Network.RegTest);
+					ba = BitcoinAddress.Create(bitcoinAddressString, NBitcoin.Altcoins.Groestlcoin.Instance.Regtest);
 				}
 			}
 

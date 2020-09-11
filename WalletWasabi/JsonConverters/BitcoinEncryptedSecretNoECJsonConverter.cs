@@ -22,7 +22,7 @@ namespace WalletWasabi.JsonConverters
 				return null;
 			}
 
-			return new BitcoinEncryptedSecretNoEC(value);
+			return new BitcoinEncryptedSecretNoEC(value, NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet);
 		}
 
 		/// <inheritdoc />

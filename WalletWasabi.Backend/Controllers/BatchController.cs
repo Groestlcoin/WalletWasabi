@@ -17,7 +17,7 @@ namespace WalletWasabi.Backend.Controllers
 	/// To make batched requests.
 	/// </summary>
 	[Produces("application/json")]
-	[Route("api/v" + Constants.BackendMajorVersion + "/btc/[controller]")]
+	[Route("api/v" + Constants.BackendMajorVersion + "/grs/[controller]")]
 	public class BatchController : Controller
 	{
 		public Global Global { get; }

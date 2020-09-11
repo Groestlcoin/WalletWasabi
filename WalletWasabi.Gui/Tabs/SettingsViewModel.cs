@@ -230,9 +230,9 @@ namespace WalletWasabi.Gui.Tabs
 
 		public IEnumerable<Network> Networks => new[]
 		{
-			Network.Main,
-			Network.TestNet,
-			Network.RegTest
+			NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet,
+			NBitcoin.Altcoins.Groestlcoin.Instance.Testnet,
+			NBitcoin.Altcoins.Groestlcoin.Instance.Regtest
 		};
 
 		public Network Network

@@ -30,7 +30,7 @@ namespace WalletWasabi.Packager
 		public const bool DoRestoreProgramCs = false;
 
 		public const string PfxPath = "C:\\digicert.pfx";
-		public const string ExecutableName = "wassabee";
+		public const string ExecutableName = "groestlmix";
 
 		// https://docs.microsoft.com/en-us/dotnet/articles/core/rid-catalog
 		// BOTTLENECKS:
@@ -113,7 +113,7 @@ namespace WalletWasabi.Packager
 		private static void GetOnions()
 		{
 			using var httpClient = new HttpClient();
-			httpClient.BaseAddress = new Uri("https://bitnodes.21.co/api/v1/");
+			httpClient.BaseAddress = new Uri("https://nodes.groestlcoin.org/api/");
 
 			using var response = httpClient.GetAsync("snapshots/latest/", HttpCompletionOption.ResponseContentRead).GetAwaiter().GetResult();
 			if (response.StatusCode != HttpStatusCode.OK)
@@ -135,10 +135,10 @@ namespace WalletWasabi.Packager
 
 				try
 				{
-					var verString = userAgent.Substring(userAgent.IndexOf("Satoshi:") + 8, 4);
+					var verString = userAgent.Substring(userAgent.IndexOf("Groestlcoin:") + 8, 4);
 					var ver = new Version(verString);
 
-					if (ver >= new Version("0.16"))
+					if (ver >= new Version("2.16.3"))
 					{
 						onions.Add(node.Name);
 					}
@@ -181,10 +181,10 @@ namespace WalletWasabi.Packager
 
 				try
 				{
-					var verString = userAgent.Substring(userAgent.IndexOf("Satoshi:") + 8, 4);
+					var verString = userAgent.Substring(userAgent.IndexOf("Groestlcoin:") + 8, 4);
 					var ver = new Version(verString);
 
-					if (ver >= new Version("0.16") && currentOnions.Contains(node.Name))
+					if (ver >= new Version("2.16.3") && currentOnions.Contains(node.Name))
 					{
 						onions.Add(node.Name);
 					}
@@ -355,10 +355,10 @@ namespace WalletWasabi.Packager
 					string publishedFolder = Path.Combine(BinDistDirectory, target);
 
 					Console.WriteLine("Move created .msi");
-					var msiPath = Path.Combine(WixProjectDirectory, @"bin\Release\Wasabi.msi");
+					var msiPath = Path.Combine(WixProjectDirectory, @"bin\Release\GroestlMix.msi");
 					if (!File.Exists(msiPath))
 					{
-						throw new Exception(".msi does not exist. Expected path: Wasabi.msi.");
+						throw new Exception(".msi does not exist. Expected path: GroestlMix.msi.");
 					}
 					var msiFileName = Path.GetFileNameWithoutExtension(msiPath);
 					var newMsiPath = Path.Combine(BinDistDirectory, $"{msiFileName}-{VersionPrefix}.msi");
@@ -374,7 +374,7 @@ namespace WalletWasabi.Packager
 						WorkingDirectory = BinDistDirectory
 					}))
 					{
-						process.StandardInput.WriteLine($"signtool sign /d \"Wasabi Wallet\" /f \"{PfxPath}\" /p {pfxPassword} /t http://timestamp.digicert.com /a \"{newMsiPath}\" && exit");
+						process.StandardInput.WriteLine($"signtool sign /d \"GroestlMix Wallet\" /f \"{PfxPath}\" /p {pfxPassword} /t http://timestamp.digicert.com /a \"{newMsiPath}\" && exit");
 						process.WaitForExit();
 					}
 
@@ -568,7 +568,7 @@ namespace WalletWasabi.Packager
 					using (var process = Process.Start(new ProcessStartInfo
 					{
 						FileName = "rcedit", // https://github.com/electron/rcedit/
-						Arguments = $"\"{newExecutablePath}\" --set-icon \"{icoPath}\" --set-file-version \"{VersionPrefix}\" --set-product-version \"{VersionPrefix}\" --set-version-string \"LegalCopyright\" \"MIT\" --set-version-string \"CompanyName\" \"zkSNACKs\" --set-version-string \"FileDescription\" \"Privacy focused, ZeroLink compliant Bitcoin wallet.\" --set-version-string \"ProductName\" \"Wasabi Wallet\"",
+						Arguments = $"\"{newExecutablePath}\" --set-icon \"{icoPath}\" --set-file-version \"{VersionPrefix}\" --set-product-version \"{VersionPrefix}\" --set-version-string \"LegalCopyright\" \"MIT\" --set-version-string \"CompanyName\" \"Groestlcoin\" --set-version-string \"FileDescription\" \"Privacy focused, ZeroLink compliant Groestlcoin wallet.\" --set-version-string \"ProductName\" \"GroestlMix Wallet\"",
 						WorkingDirectory = currentBinDistDirectory
 					}))
 					{
@@ -602,7 +602,7 @@ namespace WalletWasabi.Packager
 					Directory.Move(currentBinDistDirectory, tempName);
 					currentBinDistDirectory = tempName;
 
-					string macWasabiAppDir = Path.Combine(publishedFolder, "Wasabi Wallet.App"); // This should be lowercase .app, but MAC will prevent people from upgrading if we change it.
+					string macWasabiAppDir = Path.Combine(publishedFolder, "GroestlMix Wallet.App"); // This should be lowercase .app, but MAC will prevent people from upgrading if we change it.
 					string macContentsDir = Path.Combine(macWasabiAppDir, "Contents");
 					string newName = Path.GetFullPath(Path.Combine(macContentsDir, "MacOS"));
 					Directory.CreateDirectory(macContentsDir);
@@ -682,7 +682,7 @@ namespace WalletWasabi.Packager
 
 					string uncompressedDmgFileName = $"Wasabi-uncompressed.dmg";
 					string uncompressedDmgFilePath = Path.Combine(BinDistDirectory, uncompressedDmgFileName);
-					string dmgFileName = $"Wasabi-{VersionPrefix}.dmg";
+					string dmgFileName = $"Groestlcoin-{VersionPrefix}.dmg";
 					using (var process = Process.Start(new ProcessStartInfo
 					{
 						FileName = "cmd",
@@ -695,7 +695,7 @@ namespace WalletWasabi.Packager
 						// -V: Volume Label
 						// -no-pad: Do not pad the end by 150 sectors (300kb). As it is not a cd image, not required
 						// -apple -r: Creates a .dmg image
-						process.StandardInput.WriteLine($"wsl genisoimage -D -V \"Wasabi Wallet\" -no-pad -apple -r -dir-mode 755 -o \"{uncompressedDmgFileName}\" \"{new DirectoryInfo(publishedFolder).Name}\" && exit");
+						process.StandardInput.WriteLine($"wsl genisoimage -D -V \"GroestlMix Wallet\" -no-pad -apple -r -dir-mode 755 -o \"{uncompressedDmgFileName}\" \"{new DirectoryInfo(publishedFolder).Name}\" && exit");
 						process.WaitForExit();
 					}
 					// cd ~
@@ -739,7 +739,7 @@ namespace WalletWasabi.Packager
 					{
 						throw new Exception($"{publishedFolder} does not exist.");
 					}
-					var newFolderName = $"WasabiLinux-{VersionPrefix}";
+					var newFolderName = $"GroestlMixLinux-{VersionPrefix}";
 					var newFolderPath = Path.Combine(BinDistDirectory, newFolderName);
 					Directory.Move(publishedFolder, newFolderPath);
 					publishedFolder = newFolderPath;
@@ -753,7 +753,7 @@ namespace WalletWasabi.Packager
 						"sudo mount -t drvfs C: /mnt/c -o metadata",
 						$"cd {linuxPath}",
 						$"sudo find ./{newFolderName} -type f -exec chmod 644 {{}} \\;",
-						$"sudo find ./{newFolderName} -type f \\( -name 'wassabee' -o -name 'hwi' -o -name 'bitcoind' \\) -exec chmod +x {{}} \\;",
+						$"sudo find ./{newFolderName} -type f \\( -name 'groestlmix' -o -name 'hwi' -o -name 'groestlcoind' \\) -exec chmod +x {{}} \\;",
 						$"tar -pczvf {newFolderName}.tar.gz {newFolderName}"
 					};
 					string arguments = string.Join(" && ", commands);
@@ -785,7 +785,7 @@ namespace WalletWasabi.Packager
 					var debianFolderRelativePath = Path.Combine(debFolderRelativePath, "DEBIAN");
 					var debianFolderPath = Path.Combine(BinDistDirectory, debianFolderRelativePath);
 					Directory.CreateDirectory(debianFolderPath);
-					newFolderName = "wasabiwallet";
+					newFolderName = "groestlmix";
 					var linuxWasabiWalletFolder = Tools.LinuxPathCombine(linuxUsrLocalBinFolder, newFolderName);
 					var newFolderRelativePath = Path.Combine(debUsrLocalBinFolderRelativePath, newFolderName);
 					newFolderPath = Path.Combine(BinDistDirectory, newFolderRelativePath);
@@ -810,15 +810,15 @@ namespace WalletWasabi.Packager
 					var controlFileContent = $"Package: {ExecutableName}\n" +
 						$"Priority: optional\n" +
 						$"Section: utils\n" +
-						$"Maintainer: nopara73 <adam.ficsor73@gmail.com>\n" +
+						$"Maintainer: groestlcoin developers <groestlcoin@gmail.com>\n" +
 						$"Version: {VersionPrefix}\n" +
-						$"Homepage: http://wasabiwallet.io\n" +
-						$"Vcs-Git: git://github.com/zkSNACKs/WalletWasabi.git\n" +
-						$"Vcs-Browser: https://github.com/zkSNACKs/WalletWasabi\n" +
+						$"Homepage: http://groestlcoin.org\n" +
+						$"Vcs-Git: git://github.com/Groestlcoin/WalletWasabi.git\n" +
+						$"Vcs-Browser: https://github.com/Groestlcoin/WalletWasabi\n" +
 						$"Architecture: amd64\n" +
 						$"License: Open Source (MIT)\n" +
 						$"Installed-Size: {installedSizeKb}\n" +
-						$"Description: open-source, non-custodial, privacy focused Bitcoin wallet\n" +
+						$"Description: open-source, non-custodial, privacy focused Groestlcoin wallet\n" +
 						$"  Built-in Tor, CoinJoin and Coin Control features.\n";
 
 					File.WriteAllText(controlFilePath, controlFileContent, Encoding.ASCII);
@@ -826,15 +826,15 @@ namespace WalletWasabi.Packager
 					var desktopFilePath = Path.Combine(debUsrAppFolderPath, $"{ExecutableName}.desktop");
 					var desktopFileContent = $"[Desktop Entry]\n" +
 						$"Type=Application\n" +
-						$"Name=Wasabi Wallet\n" +
-						$"StartupWMClass=Wasabi Wallet\n" +
-						$"GenericName=Bitcoin Wallet\n" +
-						$"Comment=Privacy focused Bitcoin wallet.\n" +
+						$"Name=GroestlMix Wallet\n" +
+						$"StartupWMClass=GroestlMix Wallet\n" +
+						$"GenericName=Groestlcoin Wallet\n" +
+						$"Comment=Privacy focused Groestlcoin wallet.\n" +
 						$"Icon={ExecutableName}\n" +
 						$"Terminal=false\n" +
 						$"Exec={ExecutableName}\n" +
 						$"Categories=Office;Finance;\n" +
-						$"Keywords=bitcoin;wallet;crypto;blockchain;wasabi;privacy;anon;awesome;qwe;asd;\n";
+						$"Keywords=groestlcoin;wallet;crypto;blockchain;wasabi;privacy;anon;awesome;qwe;asd;\n";
 
 					File.WriteAllText(desktopFilePath, desktopFileContent, Encoding.ASCII);
 
@@ -854,7 +854,7 @@ namespace WalletWasabi.Packager
 						"sudo mount -t drvfs C: /mnt/c -o metadata",
 						$"cd {linuxPath}",
 						$"sudo find {Tools.LinuxPath(newFolderRelativePath)} -type f -exec chmod 644 {{}} \\;",
-						$"sudo find {Tools.LinuxPath(newFolderRelativePath)} -type f \\( -name 'wassabee' -o -name 'hwi' -o -name 'bitcoind' \\) -exec chmod +x {{}} \\;",
+						$"sudo find {Tools.LinuxPath(newFolderRelativePath)} -type f \\( -name 'groestlmix' -o -name 'hwi' -o -name 'groestlcoind' \\) -exec chmod +x {{}} \\;",
 						$"sudo chmod -R 0775 {Tools.LinuxPath(debianFolderRelativePath)}",
 						$"sudo chmod -R 0644 {debDestopFileLinuxPath}",
 						$"dpkg --build {Tools.LinuxPath(debFolderRelativePath)} $(pwd)"
@@ -874,7 +874,7 @@ namespace WalletWasabi.Packager
 					IoHelpers.DeleteRecursivelyWithMagicDustAsync(debFolderPath).GetAwaiter().GetResult();
 
 					string oldDeb = Path.Combine(BinDistDirectory, $"{ExecutableName}_{VersionPrefix}_amd64.deb");
-					string newDeb = Path.Combine(BinDistDirectory, $"Wasabi-{VersionPrefix}.deb");
+					string newDeb = Path.Combine(BinDistDirectory, $"GroestlMix-{VersionPrefix}.deb");
 					File.Move(oldDeb, newDeb);
 
 					IoHelpers.DeleteRecursivelyWithMagicDustAsync(publishedFolder).GetAwaiter().GetResult();

@@ -50,9 +50,9 @@ namespace WalletWasabi.Gui
 					return;
 				}
 
-				Logger.LogSoftwareStarted("Wasabi GUI");
+				Logger.LogSoftwareStarted("GroestlMix GUI");
 
-				BuildAvaloniaApp().StartShellApp("Wasabi Wallet", AppMainAsync, args);
+				BuildAvaloniaApp().StartShellApp("GroestlMix Wallet", AppMainAsync, args);
 			}
 			catch (Exception ex)
 			{
@@ -68,7 +68,7 @@ namespace WalletWasabi.Gui
 
 				if (runGui)
 				{
-					Logger.LogSoftwareStopped("Wasabi GUI");
+					Logger.LogSoftwareStopped("GroestlMix GUI");
 				}
 			}
 		}
@@ -124,7 +124,7 @@ namespace WalletWasabi.Gui
 
 			return result
 				.With(new Win32PlatformOptions { AllowEglInitialization = true, UseDeferredRendering = true })
-				.With(new X11PlatformOptions { UseGpu = useGpuLinux, WmClass = "Wasabi Wallet" })
+				.With(new X11PlatformOptions { UseGpu = useGpuLinux, WmClass = "GroestlMix Wallet" })
 				.With(new AvaloniaNativePlatformOptions { UseDeferredRendering = true, UseGpu = true })
 				.With(new MacOSPlatformOptions { ShowInDock = true });
 		}

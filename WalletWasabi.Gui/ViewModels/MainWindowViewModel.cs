@@ -22,7 +22,7 @@ namespace WalletWasabi.Gui.ViewModels
 		private ModalDialogViewModelBase _modalDialog;
 		private bool _canClose = true;
 
-		private string _title = "Wasabi Wallet";
+		private string _title = "GroestlMix Wallet";
 
 		public string Title
 		{
@@ -104,7 +104,7 @@ namespace WalletWasabi.Gui.ViewModels
 
 			StatusBar.Initialize(global.Nodes.ConnectedNodes, global.Synchronizer);
 
-			if (global.Network != Network.Main)
+			if (global.Network != NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 			{
 				Instance.Title += $" - {global.Network}";
 			}
