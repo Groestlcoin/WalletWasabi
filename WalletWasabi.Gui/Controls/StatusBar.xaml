@@ -71,7 +71,7 @@
           </StackPanel>
         </Panel>
         <StackPanel Orientation="Horizontal" Spacing="0">
-          <TextBlock Text="BTC/USD: " />
+          <TextBlock Text="GRS/USD: " />
           <TextBlock Text="{Binding BtcPrice}" />
         </StackPanel>
       </StackPanel>

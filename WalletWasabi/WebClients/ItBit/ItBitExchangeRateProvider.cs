@@ -14,7 +14,7 @@ namespace WalletWasabi.WebClients.ItBit
 		{
 			using var httpClient = new HttpClient();
 			httpClient.BaseAddress = new Uri("https://api.itbit.com");
-			using var response = await httpClient.GetAsync("v1/markets/GRSUSD/ticker");
+			using var response = await httpClient.GetAsync("v1/markets/XBTUSD/ticker");
 			using var content = response.Content;
 			var data = await content.ReadAsJsonAsync<ItBitExchangeRateInfo>();
 
