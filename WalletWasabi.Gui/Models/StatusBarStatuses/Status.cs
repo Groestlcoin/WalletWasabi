@@ -7,10 +7,6 @@ namespace WalletWasabi.Gui.Models.StatusBarStatuses
 {
 	public class Status : IEquatable<Status>
 	{
-		public static Status Set(StatusType type) => new Status(type, 0);
-
-		public static Status Completed(StatusType type) => new Status(type, 100);
-
 		public Status(StatusType type, ushort percentage)
 		{
 			Type = type;
@@ -21,6 +17,10 @@ namespace WalletWasabi.Gui.Models.StatusBarStatuses
 		public int Percentage { get; }
 
 		public bool IsCompleted => Percentage == 100;
+
+		public static Status Set(StatusType type) => new Status(type, 0);
+
+		public static Status Completed(StatusType type) => new Status(type, 100);
 
 		public override string ToString()
 		{
@@ -58,15 +58,15 @@ namespace WalletWasabi.Gui.Models.StatusBarStatuses
 
 		#region EqualityAndComparison
 
-		public override bool Equals(object obj) => Equals(obj as Status);
+		public override bool Equals(object? obj) => Equals(obj as Status);
 
-		public bool Equals(Status other) => this == other;
+		public bool Equals(Status? other) => this == other;
 
-		public override int GetHashCode() => Type.GetHashCode() ^ Percentage.GetHashCode();
+		public override int GetHashCode() => (Type, Percentage).GetHashCode();
 
-		public static bool operator ==(Status x, Status y) => y?.Type == x?.Type && y?.Percentage == x?.Percentage;
+		public static bool operator ==(Status? x, Status? y) => y?.Type == x?.Type && y?.Percentage == x?.Percentage;
 
-		public static bool operator !=(Status x, Status y) => !(x == y);
+		public static bool operator !=(Status? x, Status? y) => !(x == y);
 
 		#endregion EqualityAndComparison
 	}

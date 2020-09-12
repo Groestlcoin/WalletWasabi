@@ -42,7 +42,7 @@ namespace WalletWasabi.Helpers
 			// On OSX Avalonia gets the string from the Clipboard as byte[] and size.
 			// The size was mistakenly taken from the size of the original string which is not correct because of the UTF8 encoding.
 			byte[] bytes = Encoding.UTF8.GetBytes(text);
-			var myString = Encoding.UTF8.GetString(bytes.Take(text.Length).ToArray());
+			var myString = Encoding.UTF8.GetString(bytes[..text.Length]);
 			return text.Substring(0, myString.Length);
 		}
 
@@ -88,7 +88,7 @@ namespace WalletWasabi.Helpers
 			return false;
 		}
 
-		public static bool TryPassword(KeyManager keyManager, string password, out string compatibilityPasswordUsed)
+		public static bool TryPassword(KeyManager keyManager, string password, out string? compatibilityPasswordUsed)
 		{
 			compatibilityPasswordUsed = null;
 			try
@@ -115,15 +115,15 @@ namespace WalletWasabi.Helpers
 			}
 		}
 
-		public static ExtKey GetMasterExtKey(KeyManager keyManager, string password, out string compatiblityPassword)
+		public static ExtKey GetMasterExtKey(KeyManager keyManager, string password, out string? compatiblityPassword)
 		{
-			password = Helpers.Guard.Correct(password); // Correct the password to ensure compatiblity. User will be notified about this through TogglePasswordBox.
+			password = Helpers.Guard.Correct(password); // Correct the password to ensure compatibility. User will be notified about this through TogglePasswordBox.
 
 			Guard(password);
 
 			compatiblityPassword = null;
 
-			Exception resultException = null;
+			Exception? resultException = null;
 
 			foreach (var pw in GetPossiblePasswords(password))
 			{
@@ -131,7 +131,8 @@ namespace WalletWasabi.Helpers
 				{
 					ExtKey result = keyManager.GetMasterExtKey(pw);
 
-					if (resultException != null) // Now the password is OK but if we had SecurityException before than we used a cmp password.
+					// Now the password is OK but if we had SecurityException before then we used a compatibility password.
+					if (resultException is { })
 					{
 						compatiblityPassword = pw;
 						Logger.LogError(CompatibilityPasswordWarnMessage);
@@ -144,29 +145,20 @@ namespace WalletWasabi.Helpers
 				}
 			}
 
-			if (resultException is null) // This mustn't be null.
-			{
-				throw new InvalidOperationException();
-			}
-
-			throw resultException; // Throw the last exception - Invalid password.
+			throw resultException ?? new InvalidOperationException(); // Throw the last exception - Invalid password.
 		}
 
-		public static ErrorDescriptors ValidatePassword(string password)
+		public static void ValidatePassword(IValidationErrors errors, string password)
 		{
-			var errors = new ErrorDescriptors();
-
 			if (IsTrimable(password, out _))
 			{
-				errors.Add(new ErrorDescriptor(ErrorSeverity.Warning, TrimWarnMessage));
+				errors.Add(ErrorSeverity.Warning, TrimWarnMessage);
 			}
 
 			if (IsTooLong(password, out _))
 			{
-				errors.Add(new ErrorDescriptor(ErrorSeverity.Error, PasswordTooLongMessage));
+				errors.Add(ErrorSeverity.Error, PasswordTooLongMessage);
 			}
-
-			return errors;
 		}
 	}
 }

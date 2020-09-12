@@ -16,8 +16,22 @@ namespace WalletWasabi.Gui.Controls
 		private string _editText;
 		private TextBox _textBox;
 
-		private DispatcherTimer EditClickTimer { get; }
 		private IInputRoot _root;
+
+		public static readonly DirectProperty<EditableTextBlock, string> TextProperty =
+			TextBlock.TextProperty.AddOwner<EditableTextBlock>(o => o.Text, (o, v) => o.Text = v, defaultBindingMode: BindingMode.TwoWay, enableDataValidation: true);
+
+		public static readonly DirectProperty<EditableTextBlock, string> EditTextProperty =
+			AvaloniaProperty.RegisterDirect<EditableTextBlock, string>(nameof(EditText), o => o.EditText, (o, v) => o.EditText = v);
+
+		public static readonly StyledProperty<bool> InEditModeProperty =
+			AvaloniaProperty.Register<EditableTextBlock, bool>(nameof(InEditMode), defaultBindingMode: BindingMode.TwoWay);
+
+		public static readonly StyledProperty<bool> ReadModeProperty =
+			AvaloniaProperty.Register<EditableTextBlock, bool>(nameof(ReadMode), defaultValue: true, defaultBindingMode: BindingMode.TwoWay);
+
+		public static readonly StyledProperty<bool> ReadOnlyModeProperty =
+			AvaloniaProperty.Register<EditableTextBlock, bool>(nameof(ReadOnlyMode), defaultValue: true, defaultBindingMode: BindingMode.TwoWay);
 
 		static EditableTextBlock()
 		{
@@ -45,13 +59,14 @@ namespace WalletWasabi.Gui.Controls
 
 			this.GetObservable(InEditModeProperty).Subscribe(mode =>
 				{
-					if (mode && _textBox != null)
+					if (mode && _textBox is { })
 					{
 						EnterEditMode();
 					}
 				});
 
-			AddHandler(PointerPressedEvent,
+			AddHandler(
+				PointerPressedEvent,
 				(sender, e) =>
 				{
 					EditClickTimer.Stop();
@@ -80,7 +95,8 @@ namespace WalletWasabi.Gui.Controls
 				},
 				RoutingStrategies.Tunnel);
 
-			AddHandler(PointerReleasedEvent,
+			AddHandler(
+				PointerReleasedEvent,
 				(sender, e) =>
 				{
 					if (InEditMode)
@@ -99,8 +115,7 @@ namespace WalletWasabi.Gui.Controls
 				RoutingStrategies.Tunnel);
 		}
 
-		public static readonly DirectProperty<EditableTextBlock, string> TextProperty =
-			TextBlock.TextProperty.AddOwner<EditableTextBlock>(o => o.Text, (o, v) => o.Text = v, defaultBindingMode: BindingMode.TwoWay, enableDataValidation: true);
+		private DispatcherTimer EditClickTimer { get; }
 
 		[Content]
 		public string Text
@@ -115,29 +130,17 @@ namespace WalletWasabi.Gui.Controls
 			set => SetAndRaise(EditTextProperty, ref _editText, value);
 		}
 
-		public static readonly DirectProperty<EditableTextBlock, string> EditTextProperty =
-			AvaloniaProperty.RegisterDirect<EditableTextBlock, string>(nameof(EditText), o => o.EditText, (o, v) => o.EditText = v);
-
-		public static readonly StyledProperty<bool> InEditModeProperty =
-			AvaloniaProperty.Register<EditableTextBlock, bool>(nameof(InEditMode), defaultBindingMode: BindingMode.TwoWay);
-
 		public bool InEditMode
 		{
 			get => GetValue(InEditModeProperty);
 			set => SetValue(InEditModeProperty, value);
 		}
 
-		public static readonly StyledProperty<bool> ReadModeProperty =
-			AvaloniaProperty.Register<EditableTextBlock, bool>(nameof(ReadMode), defaultValue: true, defaultBindingMode: BindingMode.TwoWay);
-
 		public bool ReadMode
 		{
 			get => GetValue(ReadModeProperty);
 			set => SetValue(ReadModeProperty, value);
 		}
-
-		public static readonly StyledProperty<bool> ReadOnlyModeProperty =
-			AvaloniaProperty.Register<EditableTextBlock, bool>(nameof(ReadOnlyMode), defaultValue: true, defaultBindingMode: BindingMode.TwoWay);
 
 		public bool ReadOnlyMode
 		{

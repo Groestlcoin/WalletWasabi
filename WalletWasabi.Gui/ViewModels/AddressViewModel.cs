@@ -21,8 +21,6 @@ namespace WalletWasabi.Gui.ViewModels
 {
 	public class AddressViewModel : ViewModelBase, IDisposable
 	{
-		private CompositeDisposable Disposables { get; } = new CompositeDisposable();
-
 		private bool _isExpanded;
 		private bool[,] _qrCode;
 		private bool _clipboardNotificationVisible;
@@ -30,22 +28,14 @@ namespace WalletWasabi.Gui.ViewModels
 		private string _label;
 		private bool _inEditMode;
 		private ObservableAsPropertyHelper<string> _expandMenuCaption;
-		public ReactiveCommand<Unit, bool> ToggleQrCode { get; }
-		public ReactiveCommand<Unit, Unit> SaveQRCode { get; }
-		public ReactiveCommand<Unit, Unit> CopyAddress { get; }
-		public ReactiveCommand<Unit, Unit> CopyLabel { get; }
-		public ReactiveCommand<Unit, bool> ChangeLabel { get; }
-		public ReactiveCommand<Unit, Unit> DisplayAddressOnHw { get; }
 
-		public HdPubKey Model { get; }
-		private Global Global { get; }
-		public KeyManager KeyManager { get; }
-		public bool IsHardwareWallet { get; }
+		private volatile bool _disposedValue = false; // To detect redundant calls
 
-		public AddressViewModel(HdPubKey model, KeyManager km)
+		public AddressViewModel(HdPubKey model, KeyManager km, ReceiveTabViewModel owner)
 		{
 			Global = Locator.Current.GetService<Global>();
 			KeyManager = km;
+			Owner = owner;
 			IsHardwareWallet = km.IsHardwareWallet;
 			Model = model;
 			ClipboardNotificationVisible = false;
@@ -81,10 +71,10 @@ namespace WalletWasabi.Gui.ViewModels
 				{
 					if (InEditMode)
 					{
-						KeyManager keyManager = Global.WalletService.KeyManager;
+						KeyManager keyManager = KeyManager;
 						HdPubKey hdPubKey = keyManager.GetKeys(x => Model == x).FirstOrDefault();
 
-						if (hdPubKey != default)
+						if (hdPubKey is { })
 						{
 							hdPubKey.SetLabel(newLabel, kmToFile: keyManager);
 						}
@@ -104,7 +94,7 @@ namespace WalletWasabi.Gui.ViewModels
 
 			CopyAddress = ReactiveCommand.CreateFromTask(TryCopyToClipboardAsync);
 
-			CopyLabel = ReactiveCommand.CreateFromTask(async () => await Application.Current.Clipboard.SetTextAsync(Label ?? string.Empty));
+			CopyLabel = ReactiveCommand.CreateFromTask(async () => await Application.Current.Clipboard.SetTextAsync(Label ?? ""));
 
 			ChangeLabel = ReactiveCommand.Create(() => InEditMode = true);
 
@@ -123,6 +113,18 @@ namespace WalletWasabi.Gui.ViewModels
 				}
 			});
 
+			LockAddress = ReactiveCommand.CreateFromTask(async () =>
+			{
+				Model.SetKeyState(KeyState.Locked, km);
+				owner.InitializeAddresses();
+
+				bool isAddressCopied = await Application.Current.Clipboard.GetTextAsync() == Address;
+				if (isAddressCopied)
+				{
+					await Application.Current.Clipboard.ClearAsync();
+				}
+			});
+
 			Observable
 				.Merge(ToggleQrCode.ThrownExceptions)
 				.Merge(SaveQRCode.ThrownExceptions)
@@ -130,6 +132,7 @@ namespace WalletWasabi.Gui.ViewModels
 				.Merge(CopyLabel.ThrownExceptions)
 				.Merge(ChangeLabel.ThrownExceptions)
 				.Merge(DisplayAddressOnHw.ThrownExceptions)
+				.Merge(LockAddress.ThrownExceptions)
 				.Subscribe(ex =>
 				{
 					Logger.LogError(ex);
@@ -137,7 +140,23 @@ namespace WalletWasabi.Gui.ViewModels
 				});
 		}
 
-		public bool IsLurkingWifeMode => Global.UiConfig.LurkingWifeMode is true;
+		private CompositeDisposable Disposables { get; } = new CompositeDisposable();
+
+		public ReactiveCommand<Unit, bool> ToggleQrCode { get; }
+		public ReactiveCommand<Unit, Unit> SaveQRCode { get; }
+		public ReactiveCommand<Unit, Unit> CopyAddress { get; }
+		public ReactiveCommand<Unit, Unit> CopyLabel { get; }
+		public ReactiveCommand<Unit, bool> ChangeLabel { get; }
+		public ReactiveCommand<Unit, Unit> DisplayAddressOnHw { get; }
+		public ReactiveCommand<Unit, Unit> LockAddress { get; }
+
+		public HdPubKey Model { get; }
+		private Global Global { get; }
+		public KeyManager KeyManager { get; }
+		public ReceiveTabViewModel Owner { get; }
+		public bool IsHardwareWallet { get; }
+
+		public bool IsLurkingWifeMode => Global.UiConfig.LurkingWifeMode;
 
 		public bool ClipboardNotificationVisible
 		{
@@ -189,7 +208,7 @@ namespace WalletWasabi.Gui.ViewModels
 
 		public ReactiveCommand<string, Unit> ExecuteSaveQRCodeCommand { get; set; }
 
-		public string ExpandMenuCaption => _expandMenuCaption?.Value ?? string.Empty;
+		public string ExpandMenuCaption => _expandMenuCaption?.Value ?? "";
 
 		private CancellationTokenSource CancelClipboardNotification { get; set; }
 
@@ -198,7 +217,7 @@ namespace WalletWasabi.Gui.ViewModels
 			try
 			{
 				CancelClipboardNotification?.Cancel();
-				while (CancelClipboardNotification != null)
+				while (CancelClipboardNotification is { })
 				{
 					await Task.Delay(50);
 				}
@@ -238,8 +257,6 @@ namespace WalletWasabi.Gui.ViewModels
 		}
 
 		#region IDisposable Support
-
-		private volatile bool _disposedValue = false; // To detect redundant calls
 
 		protected virtual void Dispose(bool disposing)
 		{

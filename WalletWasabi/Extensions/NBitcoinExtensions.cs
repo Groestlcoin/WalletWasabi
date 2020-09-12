@@ -4,6 +4,7 @@ using NBitcoin.Protocol;
 using NBitcoin.RPC;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -13,7 +14,7 @@ using WalletWasabi.Blockchain.Transactions;
 using WalletWasabi.CoinJoin.Common.Crypto;
 using WalletWasabi.Helpers;
 using WalletWasabi.Models;
-using static NBitcoin.Crypto.SchnorrBlinding;
+using static WalletWasabi.Crypto.SchnorrBlinding;
 
 namespace NBitcoin
 {
@@ -52,13 +53,11 @@ namespace NBitcoin
 			}
 		}
 
-		public static TxoRef ToTxoRef(this OutPoint me) => new TxoRef(me);
-
-		public static IEnumerable<TxoRef> ToTxoRefs(this TxInList me)
+		public static IEnumerable<OutPoint> ToOutPoints(this TxInList me)
 		{
 			foreach (var input in me)
 			{
-				yield return input.PrevOut.ToTxoRef();
+				yield return input.PrevOut;
 			}
 		}
 
@@ -145,7 +144,7 @@ namespace NBitcoin
 		{
 			Guard.NotNull(nameof(me), me);
 
-			bool notNull = !(me.WitScript is null);
+			bool notNull = me.WitScript is { };
 			bool notEmpty = me.WitScript != WitScript.Empty;
 			return notNull && notEmpty;
 		}
@@ -166,37 +165,13 @@ namespace NBitcoin
 			return pubKey.WitHash == address.Hash;
 		}
 
-		public static bool VerifyUnblindedSignature(this Signer signer, UnblindedSignature signature, byte[] data)
-		{
-			uint256 hash = new uint256(Hashes.SHA256(data));
-			return VerifySignature(hash, signature, signer.Key.PubKey);
-		}
-
-		public static bool VerifyUnblindedSignature(this Signer signer, UnblindedSignature signature, uint256 dataHash)
-		{
-			return VerifySignature(dataHash, signature, signer.Key.PubKey);
-		}
-
-		public static uint256 BlindScript(this Requester requester, PubKey signerPubKey, PubKey rPubKey, Script script)
-		{
-			var msg = new uint256(Hashes.SHA256(script.ToBytes()));
-			return requester.BlindMessage(msg, rPubKey, signerPubKey);
-		}
-
-		public static Signer CreateSigner(this SchnorrKey schnorrKey)
-		{
-			var k = Guard.NotNull(nameof(schnorrKey.SignerKey), schnorrKey.SignerKey);
-			var r = Guard.NotNull(nameof(schnorrKey.Rkey), schnorrKey.Rkey);
-			return new Signer(k, r);
-		}
-
 		/// <summary>
 		/// If scriptpubkey is already present, just add the value.
 		/// </summary>
 		public static void AddWithOptimize(this TxOutList me, Money money, Script scriptPubKey)
 		{
 			TxOut found = me.FirstOrDefault(x => x.ScriptPubKey == scriptPubKey);
-			if (found != null)
+			if (found is { })
 			{
 				found.Value += money;
 			}
@@ -232,8 +207,6 @@ namespace NBitcoin
 				me.AddWithOptimize(txOut);
 			}
 		}
-
-		public static SchnorrPubKey GetSchnorrPubKey(this Signer signer) => new SchnorrPubKey(signer);
 
 		public static uint256 BlindMessage(this Requester requester, uint256 messageHash, SchnorrPubKey schnorrPubKey) => requester.BlindMessage(messageHash, schnorrPubKey.RpubKey, schnorrPubKey.SignerPubKey);
 
@@ -392,6 +365,44 @@ namespace NBitcoin
 				}
 				nodes = parentCounter.Where(x => x.Value == 0).Select(x => x.Key).Distinct().ToArray();
 			}
+		}
+
+		public static ScriptPubKeyType? GetInputScriptPubKeyType(this PSBTInput i)
+		{
+			if (i.WitnessUtxo.ScriptPubKey.IsScriptType(ScriptType.P2WPKH))
+			{
+				return ScriptPubKeyType.Segwit;
+			}
+
+			if (i.WitnessUtxo.ScriptPubKey.IsScriptType(ScriptType.P2SH) &&
+				i.FinalScriptWitness.ToScript().IsScriptType(ScriptType.P2WPKH))
+			{
+				return ScriptPubKeyType.SegwitP2SH;
+			}
+
+			return null;
+		}
+
+		private static NumberFormatInfo CurrencyNumberFormat = new NumberFormatInfo()
+		{
+			NumberGroupSeparator = " ",
+			NumberDecimalDigits = 0
+		};
+
+		private static string ToCurrency(this Money btc, string currency, decimal exchangeRate, bool lurkingWifeMode = false)
+		{
+			var dollars = exchangeRate * btc.ToDecimal(MoneyUnit.BTC);
+
+			return lurkingWifeMode
+				? $"### {currency}"
+				: exchangeRate == default
+					? $"??? {currency}"
+					: $"{dollars.ToString("N", CurrencyNumberFormat)} {currency}";
+		}
+
+		public static string ToUsdString(this Money btc, decimal usdExchangeRate, bool lurkingWifeMode = false)
+		{
+			return ToCurrency(btc, "USD", usdExchangeRate, lurkingWifeMode);
 		}
 	}
 }

@@ -1,27 +1,26 @@
 using Avalonia.Threading;
 using NBitcoin;
 using ReactiveUI;
+using Splat;
 using System;
-using System.Linq;
 using System.Reactive;
 using System.Reactive.Disposables;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using WalletWasabi.Gui.ViewModels.Validation;
-using WalletWasabi.Helpers;
-using WalletWasabi.Services;
-using WalletWasabi.Models;
 using WalletWasabi.Gui.Helpers;
+using WalletWasabi.Gui.Validation;
+using WalletWasabi.Gui.ViewModels;
+using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
-using System.Reactive.Linq;
-using Splat;
+using WalletWasabi.Models;
+using WalletWasabi.Wallets;
 
 namespace WalletWasabi.Gui.Controls.WalletExplorer
 {
-	public class WalletInfoViewModel : WalletActionViewModel
+	public class WalletInfoViewModel : WasabiDocumentTabViewModel, IWalletViewModel
 	{
-		private CompositeDisposable Disposables { get; set; }
-
+		private const string HiddenKeyString = "Sensitive Data - Not Shown";
 		private bool _showSensitiveKeys;
 		private string _password;
 		private string _extendedMasterPrivateKey;
@@ -29,11 +28,12 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		private string _extendedAccountPrivateKey;
 		private string _extendedAccountZprv;
 
-		private Global Global { get; }
-
-		public WalletInfoViewModel(WalletViewModel walletViewModel) : base(walletViewModel.Name, walletViewModel)
+		public WalletInfoViewModel(Wallet wallet) : base(wallet.WalletName)
 		{
 			Global = Locator.Current.GetService<Global>();
+			Wallet = wallet;
+
+			this.ValidateProperty(x => x.Password, ValidatePassword);
 
 			ClearSensitiveData(true);
 
@@ -45,18 +45,18 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					}
 					else
 					{
-						var secret = PasswordHelper.GetMasterExtKey(KeyManager, Password, out string isCompatibilityPasswordUsed);
+						var secret = PasswordHelper.GetMasterExtKey(Wallet.KeyManager, Password, out string isCompatibilityPasswordUsed);
 						Password = "";
 
-						if (isCompatibilityPasswordUsed != null)
+						if (isCompatibilityPasswordUsed is { })
 						{
 							NotificationHelpers.Warning(PasswordHelper.CompatibilityPasswordWarnMessage);
 						}
 
 						string master = secret.GetWif(Global.Network).ToWif();
-						string account = secret.Derive(KeyManager.AccountKeyPath).GetWif(Global.Network).ToWif();
+						string account = secret.Derive(Wallet.KeyManager.AccountKeyPath).GetWif(Global.Network).ToWif();
 						string masterZ = secret.ToZPrv(Global.Network);
-						string accountZ = secret.Derive(KeyManager.AccountKeyPath).ToZPrv(Global.Network);
+						string accountZ = secret.Derive(Wallet.KeyManager.AccountKeyPath).ToZPrv(Global.Network);
 						SetSensitiveData(master, account, masterZ, accountZ);
 					}
 				});
@@ -70,27 +70,20 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				});
 		}
 
-		private void ClearSensitiveData(bool passwordToo)
-		{
-			ExtendedMasterPrivateKey = "";
-			ExtendedMasterZprv = "";
-			ExtendedAccountPrivateKey = "";
-			ExtendedAccountZprv = "";
-			ShowSensitiveKeys = false;
+		private Global Global { get; }
 
-			if (passwordToo)
-			{
-				Password = "";
-			}
-		}
+		private Wallet Wallet { get; }
+
+		Wallet IWalletViewModel.Wallet => Wallet;
 
 		public CancellationTokenSource Closing { get; private set; }
 
-		public string ExtendedAccountPublicKey => KeyManager.ExtPubKey.ToString(Global.Network);
-		public string ExtendedAccountZpub => KeyManager.ExtPubKey.ToZpub(Global.Network);
-		public string AccountKeyPath => $"m/{KeyManager.AccountKeyPath}";
-		public string MasterKeyFingerprint => KeyManager.MasterFingerprint.ToString();
+		public string ExtendedAccountPublicKey => Wallet.KeyManager.ExtPubKey.ToString(Global.Network);
+		public string ExtendedAccountZpub => Wallet.KeyManager.ExtPubKey.ToZpub(Global.Network);
+		public string AccountKeyPath => $"m/{Wallet.KeyManager.AccountKeyPath}";
+		public string MasterKeyFingerprint => Wallet.KeyManager.MasterFingerprint.ToString();
 		public ReactiveCommand<Unit, Unit> ToggleSensitiveKeysCommand { get; }
+		public bool IsWatchOnly => Wallet.KeyManager.IsWatchOnly;
 
 		public bool ShowSensitiveKeys
 		{
@@ -98,9 +91,6 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			set => this.RaiseAndSetIfChanged(ref _showSensitiveKeys, value);
 		}
 
-		public ErrorDescriptors ValidatePassword() => PasswordHelper.ValidatePassword(Password);
-
-		[ValidateMethod(nameof(ValidatePassword))]
 		public string Password
 		{
 			get => _password;
@@ -131,6 +121,22 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			set => this.RaiseAndSetIfChanged(ref _extendedAccountZprv, value);
 		}
 
+		public void ValidatePassword(IValidationErrors errors) => PasswordHelper.ValidatePassword(errors, Password);
+
+		private void ClearSensitiveData(bool passwordToo)
+		{
+			ExtendedMasterPrivateKey = HiddenKeyString;
+			ExtendedMasterZprv = HiddenKeyString;
+			ExtendedAccountPrivateKey = HiddenKeyString;
+			ExtendedAccountZprv = HiddenKeyString;
+			ShowSensitiveKeys = false;
+
+			if (passwordToo)
+			{
+				Password = "";
+			}
+		}
+
 		private void SetSensitiveData(string extendedMasterPrivateKey, string extendedAccountPrivateKey, string extendedMasterZprv, string extendedAccountZprv)
 		{
 			ExtendedMasterPrivateKey = extendedMasterPrivateKey;
@@ -156,21 +162,19 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				});
 		}
 
-		public override void OnOpen()
+		public override void OnOpen(CompositeDisposable disposables)
 		{
-			Disposables = Disposables is null ? new CompositeDisposable() : throw new NotSupportedException($"Cannot open {GetType().Name} before closing it.");
-
 			Closing = new CancellationTokenSource();
 
 			Global.UiConfig.WhenAnyValue(x => x.LurkingWifeMode).Subscribe(_ =>
 				{
 					this.RaisePropertyChanged(nameof(ExtendedAccountPublicKey));
 					this.RaisePropertyChanged(nameof(ExtendedAccountZpub));
-				}).DisposeWith(Disposables);
+				}).DisposeWith(disposables);
 
-			Closing.DisposeWith(Disposables);
+			Closing.DisposeWith(disposables);
 
-			base.OnOpen();
+			base.OnOpen(disposables);
 		}
 
 		public override void OnDeselected()
@@ -188,8 +192,6 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 		public override bool OnClose()
 		{
 			Closing.Cancel();
-			Disposables?.Dispose();
-			Disposables = null;
 
 			ClearSensitiveData(true);
 			return base.OnClose();

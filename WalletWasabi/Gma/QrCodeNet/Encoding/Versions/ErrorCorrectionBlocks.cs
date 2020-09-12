@@ -1,17 +1,10 @@
 using System;
+using WalletWasabi.Helpers;
 
 namespace Gma.QrCodeNet.Encoding.Versions
 {
 	internal struct ErrorCorrectionBlocks
 	{
-		internal int NumErrorCorrectionCodewards { get; private set; }
-
-		internal int NumBlocks { get; private set; }
-
-		internal int ErrorCorrectionCodewordsPerBlock { get; private set; }
-
-		private ErrorCorrectionBlock[] ECBlock { get; }
-
 		internal ErrorCorrectionBlocks(int numErrorCorrectionCodewords, ErrorCorrectionBlock ecBlock)
 			: this()
 		{
@@ -30,6 +23,14 @@ namespace Gma.QrCodeNet.Encoding.Versions
 			Initialize();
 		}
 
+		internal int NumErrorCorrectionCodewards { get; private set; }
+
+		internal int NumBlocks { get; private set; }
+
+		internal int ErrorCorrectionCodewordsPerBlock { get; private set; }
+
+		private ErrorCorrectionBlock[] ECBlock { get; }
+
 		/// <summary>
 		/// Get Error Correction Blocks
 		/// </summary>
@@ -40,10 +41,7 @@ namespace Gma.QrCodeNet.Encoding.Versions
 		/// </summary>
 		private void Initialize()
 		{
-			if (ECBlock is null)
-			{
-				throw new ArgumentNullException($"{nameof(ErrorCorrectionBlocks)} array does not contain any value.");
-			}
+			Guard.NotNull(nameof(ECBlock), ECBlock);
 
 			NumBlocks = 0;
 			int blockLength = ECBlock.Length;

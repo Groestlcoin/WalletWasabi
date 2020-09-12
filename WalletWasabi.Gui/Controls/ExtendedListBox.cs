@@ -8,11 +8,10 @@ namespace WalletWasabi.Gui.Controls
 {
 	public class ExtendedListBox : ListBox, IStyleable
 	{
-		Type IStyleable.StyleKey => typeof(ListBox);
-
 		public ExtendedListBox()
 		{
-			AddHandler(PointerPressedEvent,
+			AddHandler(
+				PointerPressedEvent,
 				(sender, e) =>
 				{
 					var properties = e.GetCurrentPoint(this).Properties;
@@ -26,7 +25,10 @@ namespace WalletWasabi.Gui.Controls
 							e.KeyModifiers.HasFlag(KeyModifiers.Control));
 					}
 				},
-				RoutingStrategies.Tunnel, true);
+				RoutingStrategies.Tunnel,
+				true);
 		}
+
+		Type IStyleable.StyleKey => typeof(ListBox);
 	}
 }

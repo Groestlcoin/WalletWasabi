@@ -1,8 +1,8 @@
 using Avalonia;
-using Avalonia.Threading;
 using NBitcoin;
 using ReactiveUI;
 using System;
+using System.Linq;
 using System.Globalization;
 using System.Reactive;
 using System.Reactive.Linq;
@@ -11,25 +11,43 @@ using System.Threading.Tasks;
 using WalletWasabi.Gui.Helpers;
 using WalletWasabi.Gui.ViewModels;
 using WalletWasabi.Logging;
+using AvalonStudio.Extensibility;
+using AvalonStudio.Shell;
+using WalletWasabi.Gui.Controls.TransactionDetails.ViewModels;
 
 namespace WalletWasabi.Gui.Controls.WalletExplorer
 {
 	public class TransactionViewModel : ViewModelBase
 	{
-		private TransactionInfo Model { get; }
 		private bool _clipboardNotificationVisible;
 		private double _clipboardNotificationOpacity;
-		public ReactiveCommand<Unit, Unit> CopyTransactionId { get; }
 
-		public TransactionViewModel(TransactionInfo model)
+		public TransactionViewModel(TransactionDetailsViewModel model)
 		{
-			Model = model;
+			TransactionDetails = model;
 			ClipboardNotificationVisible = false;
 			ClipboardNotificationOpacity = 0;
 
 			CopyTransactionId = ReactiveCommand.CreateFromTask(TryCopyTxIdToClipboardAsync);
 
-			CopyTransactionId.ThrownExceptions
+			OpenTransactionInfo = ReactiveCommand.Create(() =>
+			{
+				var shell = IoC.Get<IShell>();
+
+				var transactionInfo = shell.Documents?.OfType<TransactionInfoTabViewModel>()?.FirstOrDefault(x => x.Transaction?.TransactionId == TransactionId && x.Transaction?.WalletName == WalletName);
+
+				if (transactionInfo is null)
+				{
+					transactionInfo = new TransactionInfoTabViewModel(TransactionDetails);
+					shell.AddDocument(transactionInfo);
+				}
+
+				shell.Select(transactionInfo);
+			});
+
+			Observable
+				.Merge(CopyTransactionId.ThrownExceptions)
+				.Merge(OpenTransactionInfo.ThrownExceptions)
 				.ObserveOn(RxApp.TaskpoolScheduler)
 				.Subscribe(ex =>
 				{
@@ -38,26 +56,29 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				});
 		}
 
-		public void Refresh()
-		{
-			this.RaisePropertyChanged(nameof(AmountBtc));
-			this.RaisePropertyChanged(nameof(TransactionId));
-			this.RaisePropertyChanged(nameof(DateTime));
-		}
+		private TransactionDetailsViewModel TransactionDetails { get; }
 
-		public string DateTime => Model.DateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
+		public ReactiveCommand<Unit, Unit> CopyTransactionId { get; }
 
-		public bool Confirmed => Model.Confirmed;
+		public ReactiveCommand<Unit, Unit> OpenTransactionInfo { get; }
 
-		public int Confirmations => Model.Confirmations;
+		public string DateTime => TransactionDetails.DateTime.ToString("yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture);
 
-		public string AmountBtc => Model.AmountBtc;
+		public bool Confirmed => Confirmations > 0;
 
-		public Money Amount => Money.TryParse(Model.AmountBtc, out Money money) ? money : Money.Zero;
+		public int Confirmations => TransactionDetails.Confirmations;
 
-		public string Label => Model.Label;
+		public string AmountBtc => TransactionDetails.AmountBtc;
 
-		public string TransactionId => Model.TransactionId;
+		public Money Amount => Money.TryParse(TransactionDetails.AmountBtc, out Money money) ? money : Money.Zero;
+
+		public string Label => TransactionDetails.Label;
+
+		public int BlockHeight => TransactionDetails.BlockHeight;
+
+		public string TransactionId => TransactionDetails.TransactionId;
+
+		public string WalletName => TransactionDetails.WalletName;
 
 		public bool ClipboardNotificationVisible
 		{
@@ -71,14 +92,21 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			set => this.RaiseAndSetIfChanged(ref _clipboardNotificationOpacity, value);
 		}
 
-		public CancellationTokenSource CancelClipboardNotification { get; set; }
+		public CancellationTokenSource? CancelClipboardNotification { get; set; }
+
+		public void Refresh()
+		{
+			this.RaisePropertyChanged(nameof(AmountBtc));
+			this.RaisePropertyChanged(nameof(TransactionId));
+			this.RaisePropertyChanged(nameof(DateTime));
+		}
 
 		public async Task TryCopyTxIdToClipboardAsync()
 		{
 			try
 			{
 				CancelClipboardNotification?.Cancel();
-				while (CancelClipboardNotification != null)
+				while (CancelClipboardNotification is { })
 				{
 					await Task.Delay(50);
 				}

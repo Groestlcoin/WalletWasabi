@@ -6,6 +6,7 @@ using Avalonia.Input;
 using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Media;
+using Avalonia.Platform;
 using Avalonia.Styling;
 using Avalonia.Threading;
 using AvalonStudio.Extensibility.Theme;
@@ -24,11 +25,8 @@ namespace WalletWasabi.Gui.Controls
 	{
 		private TextPresenter _presenter;
 		private MenuItem _pasteItem = null;
-		private CompositeDisposable Disposables { get; }
 
 		private Subject<string> _textPasted;
-
-		public IObservable<string> TextPasted => _textPasted.AsObservable();
 
 		public ExtendedTextBox()
 		{
@@ -86,10 +84,16 @@ namespace WalletWasabi.Gui.Controls
 				});
 		}
 
+		private CompositeDisposable Disposables { get; }
+
+		public IObservable<string> TextPasted => _textPasted.AsObservable();
+
 		Type IStyleable.StyleKey => typeof(TextBox);
 
 		private ReactiveCommand<Unit, Unit> CopyCommand { get; }
 		private ReactiveCommand<Unit, Unit> PasteCommand { get; }
+
+		protected virtual bool IsCopyEnabled => true;
 
 		private async Task<string> PasteAsync()
 		{
@@ -121,7 +125,7 @@ namespace WalletWasabi.Gui.Controls
 
 			if (start == end || (Text?.Length ?? 0) < end)
 			{
-				return string.Empty;
+				return "";
 			}
 
 			return text[start..end];
@@ -142,41 +146,30 @@ namespace WalletWasabi.Gui.Controls
 			}
 		}
 
-		protected virtual bool IsCopyEnabled => true;
-
-		private static readonly Geometry CopyIcon = Geometry.Parse(
-				"M19,21H8V7H19M19,5H8A2,2 0 0,0 6,7V21A2,2 0 0,0 8,23H19A2,2 0 0,0 21,21V7A2,2 0 0,0 19,5M16,1H4A2,2 0 0,0 2,3V17H4V3H16V1Z");
-
-		private static readonly Geometry PasteIcon = Geometry.Parse(
-				@"M19,20H5V4H7V7H17V4H19M12,2A1,1 0 0,1 13,3A1,1 0 0,1 12,4A1,1 0 0,1 11,3A1,1 0 0,1 12,2M19,2H14.82C14.4,0.84
-				13.3,0 12,0C10.7,0 9.6,0.84 9.18,2H5A2,2 0 0,0 3,4V20A2,2 0 0,0 5,22H19A2,2 0 0,0 21,20V4A2,2 0 0,0 19,2Z");
-
-		private static DrawingPresenter GetCopyPresenter()
+		private DrawingPresenter GetCopyPresenter()
 		{
-			return new DrawingPresenter
+			if (ResourceNodeExtensions.TryFindResource(this, "Copy", out var rawIcon))
 			{
-				Drawing = new GeometryDrawing
+				if (rawIcon is DrawingGroup icon)
 				{
-					Brush = Brush.Parse("#22B14C"),
-					Geometry = CopyIcon
-				},
-				Width = 16,
-				Height = 16
-			};
+					return new DrawingPresenter() { Drawing = icon };
+				}
+			}
+
+			return null;
 		}
 
-		private static DrawingPresenter GetPastePresenter()
+		private DrawingPresenter GetPastePresenter()
 		{
-			return new DrawingPresenter
+			if (ResourceNodeExtensions.TryFindResource(this, "Paste", out var rawIcon))
 			{
-				Drawing = new GeometryDrawing
+				if (rawIcon is DrawingGroup icon)
 				{
-					Brush = Brush.Parse("#22B14C"),
-					Geometry = PasteIcon
-				},
-				Width = 16,
-				Height = 16
-			};
+					return new DrawingPresenter() { Drawing = icon };
+				}
+			}
+
+			return null;
 		}
 
 		protected override void OnTemplateApplied(TemplateAppliedEventArgs e)
@@ -221,7 +214,7 @@ namespace WalletWasabi.Gui.Controls
 			// Dispatch so that if there is a context menu, it can open before the selection gets cleared.
 			Dispatcher.UIThread.PostLogException(() =>
 			{
-				if (ContextMenu != null && ContextMenu.IsOpen)
+				if (ContextMenu is { } && ContextMenu.IsOpen)
 				{
 					_presenter?.HideCaret();
 				}
@@ -234,7 +227,7 @@ namespace WalletWasabi.Gui.Controls
 
 		private void CreatePasteItem()
 		{
-			if (_pasteItem != null)
+			if (_pasteItem is { })
 			{
 				return;
 			}

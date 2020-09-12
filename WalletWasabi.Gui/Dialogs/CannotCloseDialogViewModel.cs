@@ -21,36 +21,6 @@ namespace WalletWasabi.Gui.Dialogs
 		private string _warningMessage;
 		private string _operationMessage;
 
-		private CompositeDisposable Disposables { get; set; }
-
-		private CancellationTokenSource CancelTokenSource { get; set; }
-
-		public bool IsBusy
-		{
-			get => _isBusy;
-			set => this.RaiseAndSetIfChanged(ref _isBusy, value);
-		}
-
-		public string WarningMessage
-		{
-			get => _warningMessage;
-			set => this.RaiseAndSetIfChanged(ref _warningMessage, value);
-		}
-
-		private Global Global { get; }
-
-		public string OperationMessage
-		{
-			get => _operationMessage;
-			set => this.RaiseAndSetIfChanged(ref _operationMessage, value);
-		}
-
-		public new ReactiveCommand<Unit, Unit> OKCommand { get; set; }
-		public new ReactiveCommand<Unit, Unit> CancelCommand { get; set; }
-
-		// http://blog.stephencleary.com/2013/01/async-oop-2-constructors.html
-		public Task Initialization { get; private set; }
-
 		public CannotCloseDialogViewModel() : base("", false, false)
 		{
 			Global = Locator.Current.GetService<Global>();
@@ -90,13 +60,43 @@ namespace WalletWasabi.Gui.Dialogs
 				.Subscribe(ex => Logger.LogError(ex));
 		}
 
+		private CompositeDisposable Disposables { get; set; }
+
+		private CancellationTokenSource CancelTokenSource { get; set; }
+
+		public bool IsBusy
+		{
+			get => _isBusy;
+			set => this.RaiseAndSetIfChanged(ref _isBusy, value);
+		}
+
+		public string WarningMessage
+		{
+			get => _warningMessage;
+			set => this.RaiseAndSetIfChanged(ref _warningMessage, value);
+		}
+
+		private Global Global { get; }
+
+		public string OperationMessage
+		{
+			get => _operationMessage;
+			set => this.RaiseAndSetIfChanged(ref _operationMessage, value);
+		}
+
+		public new ReactiveCommand<Unit, Unit> OKCommand { get; set; }
+		public new ReactiveCommand<Unit, Unit> CancelCommand { get; set; }
+
+		// http://blog.stephencleary.com/2013/01/async-oop-2-constructors.html
+		public Task Initialization { get; private set; }
+
 		public override void OnOpen()
 		{
 			Disposables = Disposables is null ? new CompositeDisposable() : throw new NotSupportedException($"Cannot open {GetType().Name} before closing it.");
 
 			CancelTokenSource = new CancellationTokenSource().DisposeWith(Disposables);
 
-			Initialization = StartDequeueAsync(CancelTokenSource.Token);
+			Initialization = StartDequeueAsync();
 
 			base.OnOpen();
 		}
@@ -108,7 +108,7 @@ namespace WalletWasabi.Gui.Dialogs
 			base.OnClose();
 		}
 
-		private async Task StartDequeueAsync(CancellationToken token)
+		private async Task StartDequeueAsync()
 		{
 			IsBusy = true;
 			try
@@ -125,62 +125,10 @@ namespace WalletWasabi.Gui.Dialogs
 					}
 				}
 
-				start = DateTime.Now;
-				bool last = false;
-				while (!last)
-				{
-					last = DateTime.Now - start > TimeSpan.FromMinutes(2);
-					if (CancelTokenSource.IsCancellationRequested)
-					{
-						break;
-					}
+				using var timeoutCts = new CancellationTokenSource(TimeSpan.FromMinutes(6));
+				using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(timeoutCts.Token, CancelTokenSource.Token);
+				await Global.WalletManager.DequeueAllCoinsGracefullyAsync(DequeueReason.ApplicationExit, linkedCts.Token);
 
-					try
-					{
-						if (Global.WalletService is null || Global.ChaumianClient is null)
-						{
-							return;
-						}
-
-						SmartCoin[] enqueuedCoins = Global.WalletService.Coins.CoinJoinInProcess().ToArray();
-						Exception latestException = null;
-						foreach (var coin in enqueuedCoins)
-						{
-							try
-							{
-								if (CancelTokenSource.IsCancellationRequested)
-								{
-									break;
-								}
-
-								await Global.ChaumianClient.DequeueCoinsFromMixAsync(new SmartCoin[] { coin }, DequeueReason.ApplicationExit); // Dequeue coins one-by-one to check cancel flag more frequently.
-							}
-							catch (Exception ex)
-							{
-								latestException = ex;
-
-								if (last) // if this is the last iteration and we are still failing then we throw the exception
-								{
-									throw ex;
-								}
-							}
-						}
-
-						if (latestException is null) // no exceptions were thrown during the for-each so we are done with dequeuing
-						{
-							last = true;
-						}
-					}
-					catch (Exception ex)
-					{
-						if (last)
-						{
-							throw ex;
-						}
-
-						await Task.Delay(5000, token); // wait, maybe the situation will change
-					}
-				}
 				if (!CancelTokenSource.IsCancellationRequested)
 				{
 					CancelTokenSource.Cancel();
@@ -189,7 +137,7 @@ namespace WalletWasabi.Gui.Dialogs
 			}
 			catch (Exception ex)
 			{
-				SetWarningMessage(ex.Message, token);
+				SetWarningMessage(ex.Message, CancelTokenSource.Token);
 			}
 			finally
 			{

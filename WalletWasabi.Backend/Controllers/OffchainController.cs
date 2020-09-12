@@ -18,14 +18,14 @@ namespace WalletWasabi.Backend.Controllers
 	[Route("api/v" + Constants.BackendMajorVersion + "/grs/[controller]")]
 	public class OffchainController : Controller
 	{
-		private IMemoryCache Cache { get; }
-		private IExchangeRateProvider ExchangeRateProvider { get; }
-
 		public OffchainController(IMemoryCache memoryCache, IExchangeRateProvider exchangeRateProvider)
 		{
 			Cache = memoryCache;
 			ExchangeRateProvider = exchangeRateProvider;
 		}
+
+		private IMemoryCache Cache { get; }
+		private IExchangeRateProvider ExchangeRateProvider { get; }
 
 		/// <summary>
 		/// Gets exchange rates for one Bitcoin.
@@ -56,15 +56,13 @@ namespace WalletWasabi.Backend.Controllers
 			{
 				exchangeRates = await ExchangeRateProvider.GetExchangeRateAsync();
 
-				if (exchangeRates is null)
+				if (exchangeRates.Any())
 				{
-					return Enumerable.Empty<ExchangeRate>();
+					var cacheEntryOptions = new MemoryCacheEntryOptions()
+						.SetAbsoluteExpiration(TimeSpan.FromSeconds(500));
+
+					Cache.Set(cacheKey, exchangeRates, cacheEntryOptions);
 				}
-
-				var cacheEntryOptions = new MemoryCacheEntryOptions()
-					.SetAbsoluteExpiration(TimeSpan.FromSeconds(500));
-
-				Cache.Set(cacheKey, exchangeRates, cacheEntryOptions);
 			}
 			return exchangeRates;
 		}

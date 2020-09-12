@@ -26,16 +26,18 @@ namespace Gma.QrCodeNet.Encoding
 		/// </summary>
 		internal const int PadeCodewordsOdd = 0xec;
 
+		/// <summary>
+		/// 0x11
+		/// </summary>
+		internal const int PadeCodewordsEven = 0x11;
+
+		internal const int PositionStencilWidth = 7;
+
 		internal static bool[] PadeOdd = new bool[]
 		{
 			true, true, true, false,
 			true, true, false, false
 		};
-
-		/// <summary>
-		/// 0x11
-		/// </summary>
-		internal const int PadeCodewordsEven = 0x11;
 
 		internal static bool[] PadeEven = new bool[]
 		{
@@ -47,7 +49,5 @@ namespace Gma.QrCodeNet.Encoding
 		/// URL:http://en.wikipedia.org/wiki/Byte-order_mark
 		/// </summary>
 		public static byte[] UTF8ByteOrderMark => new byte[] { 0xEF, 0xBB, 0xBF };
-
-		internal const int PositionStencilWidth = 7;
 	}
 }

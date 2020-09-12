@@ -23,15 +23,15 @@ namespace WalletWasabi.Tests.UnitTests
 		[Fact]
 		public void DependencyTransactionsGraph()
 		{
-			//  tx0 -----+
-			//           |
-			//           +----+---> tx3
-			//           |    |
-			//  tx1 -----+    +---> tx4 ---> tx5 ---> tx6 ----+
-			//                                                |
-			//                                                +---> tx7
-			//                                                |
-			//  tx2 ------------------------------------------+
+			// tx0 -----+
+			//          |
+			//          +----+---> tx3
+			//          |    |
+			// tx1 -----+    +---> tx4 ---> tx5 ---> tx6 ----+
+			//                                               |
+			//                                               +---> tx7
+			//                                               |
+			// tx2 ------------------------------------------+
 
 			var (tx0, c0) = CreateTransaction();
 			var (tx1, c1) = CreateTransaction();
@@ -79,6 +79,20 @@ namespace WalletWasabi.Tests.UnitTests
 			tx.Outputs.Add(Money.Coins(1), Script.Empty);
 			tx.PrecomputeHash(true, false);
 			return (tx, tx.Outputs.AsCoins().ToArray());
+		}
+
+		[Theory]
+		[InlineData("??? USD", 1, 0, false)]
+		[InlineData("900 USD", 1, 900, false)]
+		[InlineData("18 000 USD", 2, 9000, false)]
+		[InlineData("### USD", 2, 9000, true)]
+		[InlineData("### USD", 2, 0, true)]
+		[InlineData("1 234 567 890 USD", 123456789, 10, false)]
+		[InlineData("1 235 USD", 1234.6, 1, false)]
+		[InlineData("1 234 USD", 1234.3, 1, false)]
+		public void ToUsdStringTests(string expected, decimal coins, decimal exchangeRate, bool lurkingWifeMode)
+		{
+			Assert.Equal(expected, Money.Coins(coins).ToUsdString(exchangeRate, lurkingWifeMode));
 		}
 	}
 }

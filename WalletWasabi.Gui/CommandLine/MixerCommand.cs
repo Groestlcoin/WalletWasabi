@@ -6,30 +6,30 @@ using WalletWasabi.Logging;
 
 namespace WalletWasabi.Gui.CommandLine
 {
-	internal class MixerCommand : Command
+	public class MixerCommand : Command
 	{
-		public string WalletName { get; set; }
-		public bool MixAll { get; set; }
-		public bool KeepMixAlive { get; set; }
-		public bool ShowHelp { get; set; }
-		public Daemon Daemon { get; }
-
 		public MixerCommand(Daemon daemon)
 			: base("mix", "Start mixing without the GUI with the specified wallet.")
 		{
 			Daemon = daemon;
 			Options = new OptionSet()
 			{
-				"usage: mix --wallet:WalletName --mixall --keepalive",
+				"usage: mix --wallet:WalletName --keepalive",
 				"",
 				"Start mixing without the GUI with the specified wallet.",
-				"eg: ./groestlmix mix --wallet:MyWalletName --mixall --keepalive --loglevel:info",
-				{ "h|help", "Displays help page and exit.", x => ShowHelp = x != null },
+				"eg: ./groestlmix mix --wallet:MyWalletName --keepalive",
+				{ "h|help", "Displays help page and exit.", x => ShowHelp = x is { } },
 				{ "w|wallet=", "The name of the wallet file.", x => WalletName = x },
-				{ "mixall", "Mix once even if the coin reached the target anonymity set specified in the config file.", x => MixAll = x != null },
-				{ "keepalive", "Do not exit the software after mixing has been finished, rather keep mixing when new money arrives.", x => KeepMixAlive = x != null }
+				{ "destination=", "The name of the destination wallet file.", x => DestinationWalletName = x },
+				{ "keepalive", "Do not exit the software after mixing has been finished, rather keep mixing when new money arrives.", x => KeepMixAlive = x is { } }
 			};
 		}
+
+		public string WalletName { get; set; }
+		public string DestinationWalletName { get; set; }
+		public bool KeepMixAlive { get; set; }
+		public bool ShowHelp { get; set; }
+		public Daemon Daemon { get; }
 
 		public override async Task<int> InvokeAsync(IEnumerable<string> args)
 		{
@@ -44,11 +44,16 @@ namespace WalletWasabi.Gui.CommandLine
 
 				if (!error && !ShowHelp)
 				{
-					await Daemon.RunAsync(WalletName, MixAll, KeepMixAlive);
+					await Daemon.RunAsync(WalletName, DestinationWalletName ?? WalletName, KeepMixAlive);
 				}
 			}
 			catch (Exception ex)
 			{
+				if (!(ex is OperationCanceledException))
+				{
+					Logger.LogCritical(ex);
+				}
+
 				Console.WriteLine($"commands: There was a problem interpreting the command, please review it.");
 				Logger.LogDebug(ex);
 				error = true;

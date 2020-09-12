@@ -6,16 +6,28 @@ namespace WalletWasabi.Helpers
 {
 	public static class Guard
 	{
+		public static bool True(string parameterName, bool? value)
+			=> AssertBool(parameterName, true, value);
+
+		public static bool False(string parameterName, bool? value)
+			=> AssertBool(parameterName, false, value);
+
+		private static bool AssertBool(string parameterName, bool expectedValue, bool? value)
+		{
+			NotNull(parameterName, value);
+
+			if (value != expectedValue)
+			{
+				throw new ArgumentOutOfRangeException(parameterName, value, $"Parameter must be {expectedValue}.");
+			}
+
+			return (bool)value;
+		}
+
 		public static T NotNull<T>(string parameterName, T value)
 		{
 			AssertCorrectParameterName(parameterName);
-
-			if (value == null)
-			{
-				throw new ArgumentNullException(parameterName, "Parameter cannot be null.");
-			}
-
-			return value;
+			return value ?? throw new ArgumentNullException(parameterName, "Parameter cannot be null.");
 		}
 
 		private static void AssertCorrectParameterName(string parameterName)
@@ -162,7 +174,7 @@ namespace WalletWasabi.Helpers
 		public static string Correct(string str)
 		{
 			return string.IsNullOrWhiteSpace(str)
-				? string.Empty
+				? ""
 				: str.Trim();
 		}
 	}

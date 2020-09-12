@@ -7,6 +7,11 @@
     <LangVersion>latest</LangVersion>
     <NoWarn>1701;1702;1705;1591;1573;CA1031</NoWarn>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Nullable>enable</Nullable>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
+    <DisableImplicitNuGetFallbackFolder>true</DisableImplicitNuGetFallbackFolder>
+    <RuntimeIdentifiers>win7-x64;linux-x64;osx-x64</RuntimeIdentifiers>
+    <PathMap>$(MSBuildProjectDirectory)\=WalletWasabi</PathMap>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -22,12 +27,16 @@
 
   <ItemGroup>
 	  <PackageReference Include="Microsoft.AspNetCore.Mvc.NewtonsoftJson" Version="3.1.1" />
-	  <PackageReference Include="NBitcoin" Version="5.0.13" />
+	  <PackageReference Include="NBitcoin" Version="5.0.47" />
     <PackageReference Include="NBitcoin.Altcoins" Version="2.0.5.1" />
     <PackageReference Include="Microsoft.Win32.Registry" Version="4.7.0" />
+    <PackageReference Include="NBitcoin.Secp256k1" Version="1.0.3" />
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="Legal\Assets\LegalDocuments.txt">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Update="Microservices\Binaries\lin64\groestlcoind">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -46,10 +55,10 @@
     <None Update="Microservices\Binaries\win64\hwi.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
-    <None Update="OnionSeeds\MainOnionSeeds.txt">
+    <None Update="Tor\OnionSeeds\groestl-mainOnionSeeds.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="OnionSeeds\TestNetOnionSeeds.txt">
+    <None Update="Tor\OnionSeeds\groestl-testOnionSeeds.txt">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="TorDaemons\digests.txt">
@@ -67,7 +76,7 @@
     <None Update="TorDaemons\tor-osx64.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="TorDaemons\tor-win32.zip">
+    <None Update="TorDaemons\tor-win64.zip">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
   </ItemGroup>

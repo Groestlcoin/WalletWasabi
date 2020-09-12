@@ -3,17 +3,18 @@ using Splat;
 using System;
 using System.Reactive;
 using System.Reactive.Linq;
+using WalletWasabi.Crypto;
 using WalletWasabi.Gui.Helpers;
 using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
 
 namespace WalletWasabi.Gui.Controls.LockScreen
 {
-	public class PinLockScreenViewModel : LockScreenViewModelBase
+	public class PinLockScreenViewModel : WasabiLockScreenViewModelBase
 	{
 		private string _pinInput;
 
-		public PinLockScreenViewModel()
+		public PinLockScreenViewModel() : base()
 		{
 			KeyPadCommand = ReactiveCommand.Create<string>((arg) =>
 			{
@@ -26,7 +27,7 @@ namespace WalletWasabi.Gui.Controls.LockScreen
 				}
 				else if (arg == "CLEAR")
 				{
-					PinInput = string.Empty;
+					PinInput = "";
 				}
 				else
 				{
@@ -48,7 +49,7 @@ namespace WalletWasabi.Gui.Controls.LockScreen
 
 					if (global.UiConfig.LockScreenPinHash != HashHelpers.GenerateSha256Hash(x))
 					{
-						NotificationHelpers.Error("PIN is incorrect!");
+						NotificationHelpers.Error("PIN is incorrect.");
 					}
 				});
 
@@ -62,15 +63,15 @@ namespace WalletWasabi.Gui.Controls.LockScreen
 
 					if (global.UiConfig.LockScreenPinHash == HashHelpers.GenerateSha256Hash(x))
 					{
-						IsLocked = false;
-						PinInput = string.Empty;
+						Close();
+						PinInput = "";
 					}
 				});
 
 			this.WhenAnyValue(x => x.IsLocked)
 				.Where(x => !x)
 				.ObserveOn(RxApp.MainThreadScheduler)
-				.Subscribe(_ => PinInput = string.Empty);
+				.Subscribe(_ => PinInput = "");
 		}
 
 		public string PinInput

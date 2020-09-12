@@ -246,12 +246,12 @@
         </Rule>
         <Rule Name="DocumentationTextMustNotBeEmpty">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="DocumentationTextMustBeginWithACapitalLetter">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="DocumentationTextMustEndWithAPeriod">
@@ -391,7 +391,7 @@
         </Rule>
         <Rule Name="SingleLineCommentMustBePrecededByBlankLine">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="ElementDocumentationHeaderMustBePrecededByBlankLine">
@@ -416,7 +416,7 @@
         </Rule>
         <Rule Name="ElementMustNotBeOnSingleLine">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="SingleLineCommentsMustNotBeFollowedByBlankLine">
@@ -476,7 +476,7 @@
         </Rule>
         <Rule Name="ElementsMustAppearInTheCorrectOrder">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="ElementsMustBeOrderedByAccess">
@@ -511,7 +511,7 @@
         </Rule>
         <Rule Name="ConstantsMustAppearBeforeFields">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="SystemUsingDirectivesMustBePlacedBeforeOtherUsingDirectives">
@@ -521,7 +521,7 @@
         </Rule>
         <Rule Name="DeclarationKeywordsMustFollowOrder">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="ProtectedMustComeBeforeInternal">
@@ -581,12 +581,12 @@
         </Rule>
         <Rule Name="SplitParametersMustStartOnLineAfterDeclaration">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="ParametersMustBeOnSameLineOrSeparateLines">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="QueryClauseMustBeginOnNewLineWhenPreviousClauseSpansMultipleLines">
@@ -616,7 +616,7 @@
         </Rule>
         <Rule Name="ParameterMustFollowComma">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="UseBuiltInTypeAlias">
@@ -651,7 +651,7 @@
         </Rule>
         <Rule Name="DoNotPlaceRegionsWithinElements">
           <RuleSettings>
-            <BooleanProperty Name="Enabled">False</BooleanProperty>
+            <BooleanProperty Name="Enabled">True</BooleanProperty>
           </RuleSettings>
         </Rule>
         <Rule Name="DoNotUseRegions">

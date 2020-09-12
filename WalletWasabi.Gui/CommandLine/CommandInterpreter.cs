@@ -2,41 +2,46 @@ using Mono.Options;
 using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using WalletWasabi.Helpers;
-using WalletWasabi.Logging;
 
 namespace WalletWasabi.Gui.CommandLine
 {
-	public static class CommandInterpreter
+	public class CommandInterpreter
 	{
+		public CommandInterpreter(TextWriter outW, TextWriter errorW)
+		{
+			Out = outW;
+			Error = errorW;
+		}
+
+		private TextWriter Out { get; }
+		private TextWriter Error { get; }
+
 		/// <returns>If the GUI should run or not.</returns>
-		public static async Task<bool> ExecuteCommandsAsync(Global global, string[] args)
+		public async Task<bool> ExecuteCommandsAsync(string[] args, Command mixerCommand, Command passwordFinderCommand, Command crashReportedCommand)
 		{
 			var showHelp = false;
 			var showVersion = false;
-			var daemon = new Daemon(global);
-			Logger.InitializeDefaults(Path.Combine(daemon.Global.DataDir, "Logs.txt"));
 
 			if (args.Length == 0)
 			{
 				return true;
 			}
 
-			OptionSet options = null;
-			var suite = new CommandSet("groestlmix")
+			var suite = new CommandSet("groestlmix", Out, Error)
 			{
 				"Usage: groestlmix [OPTIONS]+",
 				"Launches GroestlMix Wallet.",
 				"",
-				{ "h|help", "Displays help page and exit.", x => showHelp = x != null },
-				{ "v|version", "Displays GroestlMix version and exit.", x => showVersion = x != null },
+				{ "h|help", "Displays help page and exit.", x => showHelp = x is { } },
+				{ "v|version", "Displays GroestlMix version and exit.", x => showVersion = x is { } },
 				"",
 				"Available commands are:",
 				"",
-				new MixerCommand(daemon),
-				new PasswordFinderCommand(daemon)
+				mixerCommand,
+				passwordFinderCommand,
+				crashReportedCommand
 			};
 
 			EnsureBackwardCompatibilityWithOldParameters(ref args);
@@ -46,7 +51,8 @@ namespace WalletWasabi.Gui.CommandLine
 			}
 			if (showHelp)
 			{
-				ShowHelp(options);
+				ShowVersion();
+				await suite.RunAsync(new string[] { "--help" });
 				return false;
 			}
 			else if (showVersion)
@@ -68,23 +74,12 @@ namespace WalletWasabi.Gui.CommandLine
 			args = listArgs.ToArray();
 		}
 
-		private static void ShowVersion()
+		private void ShowVersion()
 		{
-			Console.WriteLine($"GroestlMix Client Version: {Constants.ClientVersion}");
-			Console.WriteLine($"Compatible Coordinator Version: {Constants.BackendMajorVersion}");
-			Console.WriteLine($"Compatible Groestlcoin Core Version: {Constants.BitcoinCoreVersion}");
-			Console.WriteLine($"Compatible Hardware Wallet Interface Version: {Constants.HwiVersion}");
-		}
-
-		private static void ShowHelp(OptionSet p)
-		{
-			ShowVersion();
-			Console.WriteLine();
-			Console.WriteLine("Usage: groestlmix [OPTIONS]+");
-			Console.WriteLine("Launches GroestlMix Wallet.");
-			Console.WriteLine();
-			Console.WriteLine("Options:");
-			p.WriteOptionDescriptions(Console.Out);
+			Out.WriteLine($"GroestlMix Client Version: {Constants.ClientVersion}");
+			Out.WriteLine($"Compatible Coordinator Version: {Constants.ClientSupportBackendVersionText}");
+			Out.WriteLine($"Compatible Bitcoin Core Version: {Constants.BitcoinCoreVersion}");
+			Out.WriteLine($"Compatible Hardware Wallet Interface Version: {Constants.HwiVersion}");
 		}
 	}
 }

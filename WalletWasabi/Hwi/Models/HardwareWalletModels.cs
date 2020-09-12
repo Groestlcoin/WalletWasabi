@@ -5,7 +5,7 @@ using System.Text;
 namespace WalletWasabi.Hwi.Models
 {
 	/// <summary>
-	/// https://github.com/bitcoin-core/HWI/pull/228
+	/// Source: https://github.com/bitcoin-core/HWI/pull/228
 	/// </summary>
 	public enum HardwareWalletModels
 	{
@@ -21,5 +21,7 @@ namespace WalletWasabi.Hwi.Models
 		Trezor_1_Simulator,
 		Trezor_T,
 		Trezor_T_Simulator,
+		BitBox02_BTCOnly,
+		BitBox02_Multi,
 	}
 }

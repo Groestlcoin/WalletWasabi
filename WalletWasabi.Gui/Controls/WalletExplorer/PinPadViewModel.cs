@@ -23,31 +23,15 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 {
 	internal class PinPadViewModel : WasabiDocumentTabViewModel
 	{
-		private CompositeDisposable Disposables { get; set; }
 		private string _maskedPin;
-
-		public ReactiveCommand<Unit, Unit> SendPinCommand { get; }
-		public ReactiveCommand<string, Unit> KeyPadCommand { get; }
-
-		/*
-		 * 7 8 9
-		 * 4 5 6
-		 * 1 2 3
-		 */
-
-		public string MaskedPin
-		{
-			get => _maskedPin;
-			set => this.RaiseAndSetIfChanged(ref _maskedPin, value);
-		}
 
 		public PinPadViewModel() : base("Pin Pad")
 		{
 			SendPinCommand = ReactiveCommand.Create(() =>
-				{
-					DialogResult = true;
-					OnClose();
-				},
+			{
+				DialogResult = true;
+				OnClose();
+			},
 				this.WhenAny(x => x.MaskedPin, (maskedPin) => !string.IsNullOrWhiteSpace(maskedPin.Value)));
 
 			KeyPadCommand = ReactiveCommand.Create<string>((arg) => MaskedPin += arg);
@@ -63,19 +47,19 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 				});
 		}
 
-		public override void OnOpen()
+		public ReactiveCommand<Unit, Unit> SendPinCommand { get; }
+		public ReactiveCommand<string, Unit> KeyPadCommand { get; }
+
+		/*
+		 * 7 8 9
+		 * 4 5 6
+		 * 1 2 3
+		 */
+
+		public string MaskedPin
 		{
-			base.OnOpen();
-
-			Disposables = Disposables is null ? new CompositeDisposable() : throw new NotSupportedException($"Cannot open {GetType().Name} before closing it.");
-		}
-
-		public override bool OnClose()
-		{
-			Disposables.Dispose();
-			Disposables = null;
-
-			return base.OnClose();
+			get => _maskedPin;
+			set => this.RaiseAndSetIfChanged(ref _maskedPin, value);
 		}
 
 		public static async Task UnlockAsync()
@@ -123,7 +107,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 			}
 			finally
 			{
-				if (selectedDocument != null)
+				if (selectedDocument is { })
 				{
 					IoC.Get<IShell>().Select(selectedDocument);
 				}

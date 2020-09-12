@@ -6,7 +6,7 @@ namespace WalletWasabi.Interfaces
 	public interface IConfig
 	{
 		/// <summary>
-		/// The path of the config file.
+		/// Gets the path of the config file.
 		/// </summary>
 		string FilePath { get; }
 
@@ -23,23 +23,23 @@ namespace WalletWasabi.Interfaces
 		/// <summary>
 		/// Serialize the config if the file path of the config file is set, otherwise throw exception.
 		/// </summary>
-		Task ToFileAsync();
+		void ToFile();
 
 		/// <summary>
 		/// Load or create the config if the file path of the config file is set, otherwise throw exception.
 		/// </summary>
-		Task LoadOrCreateDefaultFileAsync();
+		void LoadOrCreateDefaultFile();
 
 		/// <summary>
 		/// Load config if the file path of the config file is set, otherwise throw exception.
 		/// </summary>
-		Task LoadFileAsync();
+		void LoadFile();
 
 		bool AreDeepEqual(object otherConfig);
 
 		/// <summary>
 		/// Check if the config file differs from the config if the file path of the config file is set, otherwise throw exception.
 		/// </summary>
-		Task<bool> CheckFileChangeAsync();
+		bool CheckFileChange();
 	}
 }

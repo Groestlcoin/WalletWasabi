@@ -11,7 +11,9 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 using WalletWasabi.Backend.Models;
+using WalletWasabi.Blockchain.Blocks;
 using WalletWasabi.Blockchain.Keys;
+using WalletWasabi.Blockchain.Mempool;
 using WalletWasabi.Blockchain.Transactions;
 using WalletWasabi.CoinJoin.Client.Clients;
 using WalletWasabi.Crypto;
@@ -22,6 +24,7 @@ using WalletWasabi.Models;
 using WalletWasabi.Services;
 using WalletWasabi.Stores;
 using WalletWasabi.Tests.XunitConfiguration;
+using WalletWasabi.Wallets;
 using Xunit;
 
 namespace WalletWasabi.Tests.IntegrationTests
@@ -54,8 +57,12 @@ namespace WalletWasabi.Tests.IntegrationTests
 			}
 			var dataDir = Path.Combine(Global.Instance.DataDir, EnvironmentHelpers.GetCallerFileName());
 
-			BitcoinStore bitcoinStore = new BitcoinStore();
-			await bitcoinStore.InitializeAsync(Path.Combine(dataDir, EnvironmentHelpers.GetMethodName()), network);
+			var dir = Path.Combine(dataDir, EnvironmentHelpers.GetMethodName());
+			var indexStore = new IndexStore(Path.Combine(dir, "indexStore"), network, new SmartHeaderChain());
+			var transactionStore = new AllTransactionStore(Path.Combine(dir, "transactionStore"), network);
+			var mempoolService = new MempoolService();
+			BitcoinStore bitcoinStore = new BitcoinStore(indexStore, transactionStore, mempoolService);
+			await bitcoinStore.InitializeAsync();
 
 			var addressManagerFolderPath = Path.Combine(dataDir, "AddressManager");
 			var addressManagerFilePath = Path.Combine(addressManagerFolderPath, $"AddressManager{network}.dat");
@@ -93,15 +100,21 @@ namespace WalletWasabi.Tests.IntegrationTests
 
 			KeyManager keyManager = KeyManager.CreateNew(out _, "password");
 			WasabiSynchronizer syncer = new WasabiSynchronizer(network, bitcoinStore, new Uri("http://localhost:12345"), Global.Instance.TorSocks5Endpoint);
-			WalletService walletService = new WalletService(
+			ServiceConfiguration serviceConfig = new ServiceConfiguration(MixUntilAnonymitySet.PrivacyLevelStrong.ToString(), 2, 21, 50, new IPEndPoint(IPAddress.Loopback, network.DefaultPort), Money.Coins(Constants.DefaultDustThreshold));
+			CachedBlockProvider blockProvider = new CachedBlockProvider(
+				new P2pBlockProvider(nodes, null, syncer, serviceConfig, network),
+				new FileSystemBlockRepository(blocksFolderPath, network));
+
+			using Wallet wallet = Wallet.CreateAndRegisterServices(
+				network,
 				bitcoinStore,
 				keyManager,
 				syncer,
-				new CoinJoinClient(syncer, network, keyManager, new Uri("http://localhost:12345"), Global.Instance.TorSocks5Endpoint),
 				nodes,
 				dataDir,
-				new ServiceConfiguration(50, 2, 21, 50, new IPEndPoint(IPAddress.Loopback, network.DefaultPort), Money.Coins(Constants.DefaultDustThreshold)),
-				syncer);
+				new ServiceConfiguration(MixUntilAnonymitySet.PrivacyLevelStrong.ToString(), 2, 21, 50, new IPEndPoint(IPAddress.Loopback, network.DefaultPort), Money.Coins(Constants.DefaultDustThreshold)),
+				syncer,
+				blockProvider);
 			Assert.True(Directory.Exists(blocksFolderPath));
 
 			try
@@ -122,7 +135,7 @@ namespace WalletWasabi.Tests.IntegrationTests
 				using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(4));
 				foreach (var hash in blocksToDownload)
 				{
-					downloadTasks.Add(walletService.FetchBlockAsync(hash, cts.Token));
+					downloadTasks.Add(blockProvider.GetBlockAsync(hash, cts.Token));
 				}
 
 				await nodeConnectionAwaiter.WaitAsync(TimeSpan.FromMinutes(3));
@@ -142,9 +155,12 @@ namespace WalletWasabi.Tests.IntegrationTests
 				// So next test will download the block.
 				foreach (var hash in blocksToDownload)
 				{
-					await walletService?.DeleteBlockAsync(hash);
+					await blockProvider.BlockRepository.RemoveAsync(hash, CancellationToken.None);
 				}
-				walletService?.Dispose();
+				if (wallet is { })
+				{
+					await wallet.StopAsync(CancellationToken.None);
+				}
 
 				if (Directory.Exists(blocksFolderPath))
 				{

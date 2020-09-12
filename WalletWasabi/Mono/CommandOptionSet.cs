@@ -123,8 +123,8 @@
 //      var p = new OptionSet () {
 //        { "a", s => a = s },
 //      };
-//      p.Parse (new string[]{"-a"});   // sets v != null
-//      p.Parse (new string[]{"-a+"});  // sets v != null
+//      p.Parse (new string[]{"-a"});   // sets v is { }
+//      p.Parse (new string[]{"-a+"});  // sets v is { }
 //      p.Parse (new string[]{"-a-"});  // sets v is null
 //
 
@@ -164,13 +164,13 @@ namespace Mono.Options
 {
 	public class CommandOptionSet : OptionSet
 	{
-		public CommandSet Commands { get; set; }
-
 		public CommandOptionSet(CommandSet commands, MessageLocalizerConverter localizer)
 			: base(localizer)
 		{
 			Commands = commands;
 		}
+
+		public CommandSet Commands { get; set; }
 
 		protected override void SetItem(int index, Option item)
 		{

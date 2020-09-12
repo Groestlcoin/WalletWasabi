@@ -123,8 +123,8 @@
 //      var p = new OptionSet () {
 //        { "a", s => a = s },
 //      };
-//      p.Parse (new string[]{"-a"});   // sets v != null
-//      p.Parse (new string[]{"-a+"});  // sets v != null
+//      p.Parse (new string[]{"-a"});   // sets v is { }
+//      p.Parse (new string[]{"-a+"});  // sets v is { }
 //      p.Parse (new string[]{"-a-"});  // sets v is null
 //
 
@@ -158,6 +158,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using WalletWasabi.Helpers;
 
 namespace Mono.Options
 {
@@ -171,10 +172,7 @@ namespace Mono.Options
 
 		public static IEnumerable<string> WrappedLines(string self, IEnumerable<int> widths)
 		{
-			if (widths is null)
-			{
-				throw new ArgumentNullException(nameof(widths));
-			}
+			Guard.NotNull(nameof(widths), widths);
 
 			return CreateWrappedLinesIterator(self, widths);
 		}
@@ -183,7 +181,7 @@ namespace Mono.Options
 		{
 			if (string.IsNullOrEmpty(self))
 			{
-				yield return string.Empty;
+				yield return "";
 				yield break;
 			}
 			using IEnumerator<int> eWidths = widths.GetEnumerator();
@@ -224,11 +222,11 @@ namespace Mono.Options
 			{
 				curWidth = (eValid = eWidths.MoveNext()).Value ? eWidths.Current : curWidth;
 				// '.' is any character, - is for a continuation
-				const string minWidth = ".-";
-				if (curWidth < minWidth.Length)
+				const string MinWidth = ".-";
+				if (curWidth < MinWidth.Length)
 				{
 					throw new ArgumentOutOfRangeException("widths",
-						$"Element must be greater than or equal to {minWidth.Length}, was {curWidth}.");
+						$"Element must be greater than or equal to {MinWidth.Length}, was {curWidth}.");
 				}
 
 				return curWidth;

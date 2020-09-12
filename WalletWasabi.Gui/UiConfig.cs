@@ -8,10 +8,11 @@ using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 using WalletWasabi.Bases;
+using WalletWasabi.Gui.Controls;
 using WalletWasabi.Gui.Converters;
 using WalletWasabi.Gui.Models;
+using WalletWasabi.Gui.Models.Sorting;
 using WalletWasabi.Helpers;
 using WalletWasabi.Interfaces;
 using WalletWasabi.JsonConverters;
@@ -23,21 +24,22 @@ namespace WalletWasabi.Gui
 	{
 		private bool _lurkingWifeMode;
 		private bool _lockScreenActive;
-		private string _lockScreenPinHash;
+		private string _lockScreenPinHash = "";
 		private bool _isCustomFee;
+		private bool _isCustomChangeAddress;
 		private bool _autocopy;
+
+		public UiConfig() : base()
+		{
+		}
+
+		public UiConfig(string filePath) : base(filePath)
+		{
+		}
 
 		[JsonProperty(PropertyName = "WindowState")]
 		[JsonConverter(typeof(WindowStateAfterStartJsonConverter))]
-		public WindowState WindowState { get; internal set; } = WindowState.Maximized;
-
-		[DefaultValue(530)]
-		[JsonProperty(PropertyName = "Height", DefaultValueHandling = DefaultValueHandling.Populate)]
-		public double Height { get; internal set; }
-
-		[DefaultValue(1100)]
-		[JsonProperty(PropertyName = "Width", DefaultValueHandling = DefaultValueHandling.Populate)]
-		public double Width { get; internal set; }
+		public WindowState WindowState { get; internal set; } = WindowState.Normal;
 
 		[DefaultValue(2)]
 		[JsonProperty(PropertyName = "FeeTarget", DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -49,7 +51,7 @@ namespace WalletWasabi.Gui
 
 		[DefaultValue("")]
 		[JsonProperty(PropertyName = "LastActiveTab", DefaultValueHandling = DefaultValueHandling.Populate)]
-		public string LastActiveTab { get; internal set; }
+		public string LastActiveTab { get; internal set; } = "";
 
 		[DefaultValue(true)]
 		[JsonProperty(PropertyName = "Autocopy", DefaultValueHandling = DefaultValueHandling.Populate)]
@@ -65,6 +67,14 @@ namespace WalletWasabi.Gui
 		{
 			get => _isCustomFee;
 			set => RaiseAndSetIfChanged(ref _isCustomFee, value);
+		}
+
+		[DefaultValue(false)]
+		[JsonProperty(PropertyName = "IsCustomChangeAddress", DefaultValueHandling = DefaultValueHandling.Populate)]
+		public bool IsCustomChangeAddress
+		{
+			get => _isCustomChangeAddress;
+			set => RaiseAndSetIfChanged(ref _isCustomChangeAddress, value);
 		}
 
 		[DefaultValue(false)]
@@ -91,12 +101,16 @@ namespace WalletWasabi.Gui
 			set => RaiseAndSetIfChanged(ref _lockScreenPinHash, value);
 		}
 
-		public UiConfig() : base()
-		{
-		}
+		[JsonProperty(PropertyName = "CoinListViewSortingPreference")]
+		[JsonConverter(typeof(SortingPreferenceJsonConverter))]
+		public SortingPreference CoinListViewSortingPreference { get; internal set; } = new SortingPreference(SortOrder.Increasing, "Amount");
 
-		public UiConfig(string filePath) : base(filePath)
-		{
-		}
+		[JsonProperty(PropertyName = "CoinJoinTabSortingPreference")]
+		[JsonConverter(typeof(SortingPreferenceJsonConverter))]
+		public SortingPreference CoinJoinTabSortingPreference { get; internal set; } = new SortingPreference(SortOrder.Increasing, "Amount");
+
+		[JsonProperty(PropertyName = "HistoryTabViewSortingPreference")]
+		[JsonConverter(typeof(SortingPreferenceJsonConverter))]
+		public SortingPreference HistoryTabViewSortingPreference { get; internal set; } = new SortingPreference(SortOrder.Decreasing, "Date");
 	}
 }

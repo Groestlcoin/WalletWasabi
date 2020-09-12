@@ -12,21 +12,6 @@ namespace WalletWasabi.Blockchain.Analysis.FeesEstimation
 	[JsonObject(MemberSerialization.OptIn)]
 	public class AllFeeEstimate : IEquatable<AllFeeEstimate>
 	{
-		[JsonProperty]
-		public EstimateSmartFeeMode Type { get; private set; }
-
-		/// <summary>
-		/// If it's been fetched from a fully synced node.
-		/// </summary>
-		[JsonProperty]
-		public bool IsAccurate { get; private set; }
-
-		/// <summary>
-		/// int: fee target, decimal: satoshi/vByte
-		/// </summary>
-		[JsonProperty]
-		public Dictionary<int, int> Estimations { get; private set; }
-
 		[JsonConstructor]
 		public AllFeeEstimate(EstimateSmartFeeMode type, IDictionary<int, int> estimations, bool isAccurate)
 		{
@@ -38,18 +23,36 @@ namespace WalletWasabi.Blockchain.Analysis.FeesEstimation
 			Create(other.Type, other.Estimations, isAccurate);
 		}
 
+		[JsonProperty]
+		public EstimateSmartFeeMode Type { get; private set; }
+
+		/// <summary>
+		/// Gets a value indicating whether the fee has been fetched from a fully synced node.
+		/// </summary>
+		[JsonProperty]
+		public bool IsAccurate { get; private set; }
+
+		/// <summary>
+		/// Gets the fee estimations: int: fee target, int: satoshi/vByte
+		/// </summary>
+		[JsonProperty]
+		public Dictionary<int, int> Estimations { get; private set; }
+
 		private void Create(EstimateSmartFeeMode type, IDictionary<int, int> estimations, bool isAccurate)
 		{
 			Type = type;
 			IsAccurate = isAccurate;
 			Guard.NotNullOrEmpty(nameof(estimations), estimations);
 			Estimations = new Dictionary<int, int>();
-			var valueSet = new HashSet<decimal>();
-			// Make sure values are unique and in the correct order.
+
+			// Make sure values are unique and in the correct order and feerates are consistently decreasing.
+			var lastFeeRate = int.MaxValue;
 			foreach (KeyValuePair<int, int> estimation in estimations.OrderBy(x => x.Key))
 			{
-				if (valueSet.Add(estimation.Value))
+				// Otherwise it's inconsistent data.
+				if (lastFeeRate > estimation.Value)
 				{
+					lastFeeRate = estimation.Value;
 					Estimations.TryAdd(estimation.Key, estimation.Value);
 				}
 			}

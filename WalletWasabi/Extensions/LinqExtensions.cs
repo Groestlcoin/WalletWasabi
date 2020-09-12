@@ -7,6 +7,37 @@ namespace System.Linq
 {
 	public static class LinqExtensions
 	{
+		public static IEnumerable<IEnumerable<T>> Batch<T>(
+		   this IEnumerable<T> source, int size)
+		{
+			T[] bucket = null;
+			var count = 0;
+
+			foreach (var item in source)
+			{
+				bucket ??= new T[size];
+
+				bucket[count++] = item;
+
+				if (count != size)
+				{
+					continue;
+				}
+
+				yield return bucket.Select(x => x);
+
+				bucket = null;
+				count = 0;
+			}
+
+			// Return the last bucket with all remaining elements
+			if (bucket is { } && count > 0)
+			{
+				Array.Resize(ref bucket, count);
+				yield return bucket.Select(x => x);
+			}
+		}
+
 		public static T RandomElement<T>(this IEnumerable<T> source)
 		{
 			T current = default;
@@ -59,7 +90,7 @@ namespace System.Linq
 			}
 		}
 
-		public static void AddToValueList<TKey, TValue, Telem>(this Dictionary<TKey, TValue> myDic, TKey key, Telem elem) where TValue : List<Telem>
+		public static void AddToValueList<TKey, TValue, TElem>(this Dictionary<TKey, TValue> myDic, TKey key, TElem elem) where TValue : List<TElem>
 		{
 			if (myDic.ContainsKey(key))
 			{
@@ -67,7 +98,7 @@ namespace System.Linq
 			}
 			else
 			{
-				myDic.Add(key, new List<Telem>() { elem } as TValue);
+				myDic.Add(key, new List<TElem>() { elem } as TValue);
 			}
 		}
 
@@ -91,9 +122,7 @@ namespace System.Linq
 		}
 
 		public static bool NotNullAndNotEmpty<T>(this IEnumerable<T> source)
-		{
-			return !(source is null) && source.Any();
-		}
+			=> source?.Any() is true;
 
 		public static IEnumerable<IEnumerable<T>> CombinationsWithoutRepetition<T>(
 			this IEnumerable<T> items,
@@ -184,7 +213,8 @@ namespace System.Linq
 				.Select(x => x.ToLine());
 
 		/// <summary>
-		/// https://stackoverflow.com/a/24087164/2061103
+		/// Chunks the source list to sub-lists by the specified chunk size.
+		/// Source: https://stackoverflow.com/a/24087164/2061103
 		/// </summary>
 		public static IEnumerable<IEnumerable<T>> ChunkBy<T>(this IEnumerable<T> source, int chunkSize)
 		{
@@ -192,6 +222,18 @@ namespace System.Linq
 				.Select((x, i) => new { Index = i, Value = x })
 				.GroupBy(x => x.Index / chunkSize)
 				.Select(x => x.Select(v => v.Value));
+		}
+
+		/// <summary>
+		/// Creates a tuple collection from two collections. If lengths differ, exception is thrown.
+		/// </summary>
+		public static IEnumerable<(T1, T2)> ZipForceEqualLength<T1, T2>(this IEnumerable<T1> source, IEnumerable<T2> otherCollection)
+		{
+			if (source.Count() != otherCollection.Count())
+			{
+				throw new InvalidOperationException($"{nameof(source)} and {nameof(otherCollection)} collections must have the same number of elements. {nameof(source)}:{source.Count()}, {nameof(otherCollection)}:{otherCollection.Count()}.");
+			}
+			return source.Zip(otherCollection);
 		}
 	}
 }

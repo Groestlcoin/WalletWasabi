@@ -38,7 +38,7 @@ namespace WalletWasabi.BitcoinCore.Configuration
 			yield return $"{GetConfigPrefix(network)}.";
 			if (network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 			{
-				yield return string.Empty;
+				yield return "";
 			}
 		}
 
@@ -47,7 +47,7 @@ namespace WalletWasabi.BitcoinCore.Configuration
 			Guard.NotNull(nameof(network), network);
 			if (network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet)
 			{
-				return string.Empty;
+				return "";
 			}
 			else if (network == NBitcoin.Altcoins.Groestlcoin.Instance.Testnet)
 			{

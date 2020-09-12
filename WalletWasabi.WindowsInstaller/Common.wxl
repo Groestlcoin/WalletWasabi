@@ -7,7 +7,7 @@
 
   <String Id="Language">1033</String>
 
-  <String Id="Description">Privacy focused, ZeroLink compliant Groestlcoin wallet.</String>
+  <String Id="Description">Privacy focused Groestlcoin wallet.</String>
   <String Id="Keywords">groestlcoin,cryptocurrency,blockchain,privacy,fungibility,anonymity</String>
   <String Id="Comments">Easy Peasy Lemon Squeezey</String>
 </WixLocalization>

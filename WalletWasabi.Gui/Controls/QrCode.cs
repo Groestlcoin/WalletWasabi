@@ -18,9 +18,19 @@ namespace WalletWasabi.Gui.Controls
 	public class QrCode : Control
 	{
 		private const int MatrixPadding = 2;
-		private Size CoercedSize { get; set; }
-		private double GridCellFactor { get; set; }
-		private bool[,] FinalMatrix { get; set; }
+
+		public static readonly DirectProperty<QrCode, ReactiveCommand<string, Unit>> SaveCommandProperty =
+			AvaloniaProperty.RegisterDirect<QrCode, ReactiveCommand<string, Unit>>(
+				nameof(SaveCommand),
+				o => o.SaveCommand,
+				(o, v) => o.SaveCommand = v);
+
+		private ReactiveCommand<string, Unit> _saveCommand;
+
+		public static readonly DirectProperty<QrCode, bool[,]> MatrixProperty =
+			AvaloniaProperty.RegisterDirect<QrCode, bool[,]>(nameof(Matrix), o => o.Matrix, (o, v) => o.Matrix = v);
+
+		private bool[,] _matrix;
 
 		static QrCode()
 		{
@@ -48,6 +58,23 @@ namespace WalletWasabi.Gui.Controls
 				});
 		}
 
+		private Size CoercedSize { get; set; }
+		private double GridCellFactor { get; set; }
+		private bool[,] FinalMatrix { get; set; }
+
+		public ReactiveCommand<string, Unit> SaveCommand
+		{
+			get => _saveCommand;
+			set => SetAndRaise(SaveCommandProperty, ref _saveCommand, value);
+		}
+
+		[Content]
+		public bool[,] Matrix
+		{
+			get => _matrix;
+			set => SetAndRaise(MatrixProperty, ref _matrix, value);
+		}
+
 		public async Task<Unit> SaveQRCodeAsync(string address)
 		{
 			if (FinalMatrix is null)
@@ -56,7 +83,7 @@ namespace WalletWasabi.Gui.Controls
 			}
 
 			var sfd = new SaveFileDialog();
-
+			sfd.Title = "Save QR Code...";
 			sfd.InitialFileName = $"{address}.png";
 			sfd.Directory = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
 			sfd.Filters.Add(new FileDialogFilter() { Name = "Portable Network Graphics (PNG) Image file", Extensions = { "png" } });
@@ -81,32 +108,6 @@ namespace WalletWasabi.Gui.Controls
 			}
 
 			return Unit.Default;
-		}
-
-		public static readonly DirectProperty<QrCode, ReactiveCommand<string, Unit>> SaveCommandProperty =
-			AvaloniaProperty.RegisterDirect<QrCode, ReactiveCommand<string, Unit>>(
-				nameof(SaveCommand),
-				o => o.SaveCommand,
-				(o, v) => o.SaveCommand = v);
-
-		private ReactiveCommand<string, Unit> _saveCommand;
-
-		public ReactiveCommand<string, Unit> SaveCommand
-		{
-			get => _saveCommand;
-			set => SetAndRaise(SaveCommandProperty, ref _saveCommand, value);
-		}
-
-		public static readonly DirectProperty<QrCode, bool[,]> MatrixProperty =
-			AvaloniaProperty.RegisterDirect<QrCode, bool[,]>(nameof(Matrix), o => o.Matrix, (o, v) => o.Matrix = v);
-
-		private bool[,] _matrix;
-
-		[Content]
-		public bool[,] Matrix
-		{
-			get => _matrix;
-			set => SetAndRaise(MatrixProperty, ref _matrix, value);
 		}
 
 		private bool[,] AddPaddingToMatrix(bool[,] matrix)

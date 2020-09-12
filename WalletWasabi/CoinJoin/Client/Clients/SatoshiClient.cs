@@ -4,8 +4,10 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using WalletWasabi.Bases;
 using WalletWasabi.CoinJoin.Common.Models;
+using WalletWasabi.Tor.Http.Bases;
+using WalletWasabi.Tor.Http.Extensions;
+using WalletWasabi.WebClients.Wasabi;
 
 namespace WalletWasabi.CoinJoin.Client.Clients
 {
@@ -21,28 +23,27 @@ namespace WalletWasabi.CoinJoin.Client.Clients
 		{
 		}
 
-		public async Task<IEnumerable<RoundStateResponse>> GetAllRoundStatesAsync()
+		public async Task<IEnumerable<RoundStateResponseBase>> GetAllRoundStatesAsync()
 		{
-			using var response = await TorClient.SendAsync(HttpMethod.Get, $"/api/v{Helpers.Constants.BackendMajorVersion}/grs/chaumiancoinjoin/states/").ConfigureAwait(false);
+			using var response = await TorClient.SendAsync(HttpMethod.Get, $"/api/v{WasabiClient.ApiVersion}/grs/chaumiancoinjoin/states/").ConfigureAwait(false);
 			if (response.StatusCode != HttpStatusCode.OK)
 			{
 				await response.ThrowRequestExceptionFromContentAsync().ConfigureAwait(false);
 			}
 
-			var states = await response.Content.ReadAsJsonAsync<IEnumerable<RoundStateResponse>>().ConfigureAwait(false);
-
+			var states = await response.Content.ReadAsJsonAsync<IEnumerable<RoundStateResponseBase>>().ConfigureAwait(false);
 			return states;
 		}
 
-		public async Task<RoundStateResponse> GetRoundStateAsync(long roundId)
+		public async Task<RoundStateResponseBase> GetRoundStateAsync(long roundId)
 		{
-			IEnumerable<RoundStateResponse> states = await GetAllRoundStatesAsync().ConfigureAwait(false);
+			IEnumerable<RoundStateResponseBase> states = await GetAllRoundStatesAsync().ConfigureAwait(false);
 			return states.Single(x => x.RoundId == roundId);
 		}
 
-		public async Task<RoundStateResponse> GetRegistrableRoundStateAsync()
+		public async Task<RoundStateResponseBase> GetRegistrableRoundStateAsync()
 		{
-			IEnumerable<RoundStateResponse> states = await GetAllRoundStatesAsync().ConfigureAwait(false);
+			IEnumerable<RoundStateResponseBase> states = await GetAllRoundStatesAsync().ConfigureAwait(false);
 			return states.First(x => x.Phase == RoundPhase.InputRegistration);
 		}
 	}

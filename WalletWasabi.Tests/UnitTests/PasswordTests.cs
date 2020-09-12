@@ -7,6 +7,7 @@ using WalletWasabi.Helpers;
 using Xunit;
 using WalletWasabi.Logging;
 using WalletWasabi.Blockchain.Keys;
+using WalletWasabi.Crypto.Randomness;
 
 namespace WalletWasabi.Tests.UnitTests
 {
@@ -53,17 +54,18 @@ namespace WalletWasabi.Tests.UnitTests
 			var keyManager = KeyManager.CreateNew(out _, Guard.Correct(buggy)); // Every wallet was created with Guard.Correct before.
 
 			Logger.TurnOff();
+
 			// Password will be trimmed inside.
 			PasswordHelper.GetMasterExtKey(keyManager, original, out _);
 
 			// This should not throw format exception but pw is not correct.
-			Assert.Throws<SecurityException>(() => PasswordHelper.GetMasterExtKey(keyManager, RandomString.Generate(PasswordHelper.MaxPasswordLength), out _));
+			Assert.Throws<SecurityException>(() => PasswordHelper.GetMasterExtKey(keyManager, RandomString.AlphaNumeric(PasswordHelper.MaxPasswordLength), out _));
 
 			// Password should be formatted, before entering here.
-			Assert.Throws<FormatException>(() => PasswordHelper.GetMasterExtKey(keyManager, RandomString.Generate(PasswordHelper.MaxPasswordLength + 1), out _));
+			Assert.Throws<FormatException>(() => PasswordHelper.GetMasterExtKey(keyManager, RandomString.AlphaNumeric(PasswordHelper.MaxPasswordLength + 1), out _));
 
 			// Too long password with extra spaces.
-			var badPassword = $"   {RandomString.Generate(PasswordHelper.MaxPasswordLength + 1)}   ";
+			var badPassword = $"   {RandomString.AlphaNumeric(PasswordHelper.MaxPasswordLength + 1)}   ";
 
 			// Password should be formatted, before entering here.
 			Assert.Throws<FormatException>(() => PasswordHelper.GetMasterExtKey(keyManager, badPassword, out _));

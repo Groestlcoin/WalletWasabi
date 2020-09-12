@@ -10,16 +10,6 @@ namespace WalletWasabi.Tests
 {
 	public class RpcTests
 	{
-		[Theory]
-		[MemberData(nameof(RequestResponse))]
-		public async Task ParsingRequestTestsAsync(string request, string expectedResponse)
-		{
-			var handler = new JsonRpcRequestHandler<TestableRpcService>(new TestableRpcService());
-
-			var response = await handler.HandleAsync(request, CancellationToken.None).ConfigureAwait(false);
-			Assert.Equal(expectedResponse, response);
-		}
-
 		public static IEnumerable<object[]> RequestResponse =>
 			new[]
 			{
@@ -33,7 +23,7 @@ namespace WalletWasabi.Tests
 				{
 					"Invalid (missing jsonrpc) request",
 					Request("1", "substract", 42, 23).Replace("\"jsonrpc\":\"2.0\",", ""),
-					Error(null, -32700, "Parse error")
+					Ok("1", 19)
 				},
 				new[]
 				{
@@ -69,7 +59,7 @@ namespace WalletWasabi.Tests
 				{
 					"Valid request (Notification)",
 					Request(null, "substract", 42, 23),
-					string.Empty
+					""
 				},
 				new[]
 				{
@@ -97,6 +87,16 @@ namespace WalletWasabi.Tests
 				}
 			}
 			.Select(x => x.Skip(1).ToArray());
+
+		[Theory]
+		[MemberData(nameof(RequestResponse))]
+		public async Task ParsingRequestTestsAsync(string request, string expectedResponse)
+		{
+			var handler = new JsonRpcRequestHandler<TestableRpcService>(new TestableRpcService());
+
+			var response = await handler.HandleAsync(request, CancellationToken.None);
+			Assert.Equal(expectedResponse, response);
+		}
 
 		private static string Request(string id, string methodName, params object[] parameters)
 		{
@@ -131,10 +131,12 @@ namespace WalletWasabi.Tests
 
 		private static string ToJson(object o)
 		{
-			return JsonConvert.SerializeObject(o, new JsonSerializerSettings
-			{
-				DefaultValueHandling = DefaultValueHandling.Ignore
-			});
+			return JsonConvert.SerializeObject(
+				o,
+				new JsonSerializerSettings
+				{
+					DefaultValueHandling = DefaultValueHandling.Ignore
+				});
 		}
 	}
 }

@@ -4,32 +4,19 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using WalletWasabi.Backend.Models;
 using WalletWasabi.Interfaces;
+using WalletWasabi.Tor.Http.Extensions;
 
 namespace WalletWasabi.WebClients.Coinbase
 {
 	public class CoinbaseExchangeRateProvider : IExchangeRateProvider
 	{
-		private class DataWrapper
-		{
-			public class CoinbaseExchangeRate
-			{
-				public class ExchangeRates
-				{
-					public decimal USD { get; set; }
-				}
-
-				public ExchangeRates Rates { get; set; }
-			}
-
-			public CoinbaseExchangeRate Data { get; set; }
-		}
-
-		public async Task<List<ExchangeRate>> GetExchangeRateAsync()
+		public async Task<IEnumerable<ExchangeRate>> GetExchangeRateAsync()
 		{
 			using var httpClient = new HttpClient();
 			httpClient.BaseAddress = new Uri("https://api.coinbase.com");
-			var response = await httpClient.GetAsync("/v2/exchange-rates?currency=GRS");
-			var wrapper = await response.Content.ReadAsJsonAsync<DataWrapper>();
+			using var response = await httpClient.GetAsync("/v2/exchange-rates?currency=GRS");
+			using var content = response.Content;
+			var wrapper = await content.ReadAsJsonAsync<DataWrapper>();
 
 			var exchangeRates = new List<ExchangeRate>
 				{
@@ -37,6 +24,21 @@ namespace WalletWasabi.WebClients.Coinbase
 				};
 
 			return exchangeRates;
+		}
+
+		private class DataWrapper
+		{
+			public CoinbaseExchangeRate Data { get; set; }
+
+			public class CoinbaseExchangeRate
+			{
+				public ExchangeRates Rates { get; set; }
+
+				public class ExchangeRates
+				{
+					public decimal USD { get; set; }
+				}
+			}
 		}
 	}
 }

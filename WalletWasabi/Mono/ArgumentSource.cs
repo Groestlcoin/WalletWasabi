@@ -123,8 +123,8 @@
 //      var p = new OptionSet () {
 //        { "a", s => a = s },
 //      };
-//      p.Parse (new string[]{"-a"});   // sets v != null
-//      p.Parse (new string[]{"-a+"});  // sets v != null
+//      p.Parse (new string[]{"-a"});   // sets v is { }
+//      p.Parse (new string[]{"-a+"});  // sets v is { }
 //      p.Parse (new string[]{"-a-"});  // sets v is null
 //
 
@@ -168,9 +168,9 @@ namespace Mono.Options
 		{
 		}
 
-		public abstract string[] GetNames();
-
 		public abstract string Description { get; }
+
+		public abstract string[] GetNames();
 
 		public abstract bool GetArguments(string value, out IEnumerable<string> replacement);
 
@@ -187,7 +187,7 @@ namespace Mono.Options
 				StringBuilder arg = new StringBuilder();
 
 				string line;
-				while ((line = reader.ReadLine()) != null)
+				while ((line = reader.ReadLine()) is { })
 				{
 					int t = line.Length;
 

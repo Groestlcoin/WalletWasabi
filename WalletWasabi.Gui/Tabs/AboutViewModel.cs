@@ -11,12 +11,17 @@ using System.Reactive;
 using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
 using System.Reactive.Linq;
+using WalletWasabi.WebClients.Wasabi;
+using System.Reactive.Disposables;
+using Splat;
+using WalletWasabi.Models;
+using WalletWasabi.Services;
 
 namespace WalletWasabi.Gui.Tabs
 {
 	internal class AboutViewModel : WasabiDocumentTabViewModel
 	{
-		public ReactiveCommand<string, Unit> OpenBrowserCommand { get; }
+		private string _currentBackendMajorVersion;
 
 		public AboutViewModel() : base("About")
 		{
@@ -27,8 +32,16 @@ namespace WalletWasabi.Gui.Tabs
 				.Subscribe(ex => Logger.LogError(ex));
 		}
 
+		public ReactiveCommand<string, Unit> OpenBrowserCommand { get; }
 		public Version ClientVersion => Constants.ClientVersion;
-		public string BackendMajorVersion => Constants.BackendMajorVersion;
+		public string BackendCompatibleVersions => Constants.ClientSupportBackendVersionText;
+
+		public string CurrentBackendMajorVersion
+		{
+			get => _currentBackendMajorVersion;
+			set => this.RaiseAndSetIfChanged(ref _currentBackendMajorVersion, value);
+		}
+
 		public Version BitcoinCoreVersion => Constants.BitcoinCoreVersion;
 		public Version HwiVersion => Constants.HwiVersion;
 
@@ -40,10 +53,19 @@ namespace WalletWasabi.Gui.Tabs
 
 		public string CustomerSupportLink => "https://www.reddit.com/r/Groestlcoin/";
 
-		public string BugReportLink => "https://github.com/Groestlcoin/WalletWasabi/issues/";
+		public string UserSupportLink => "https://www.reddit.com/r/Groestlcoin/";
+
+		public string FAQLink => "https://groestlcoin.org/forum/";
 
 		public string FAQLink => "https://groestlcoin.org/forum/";
 
 		public string DocsLink => "https://groestlcoin.org/forum/";
+
+		public override void OnOpen(CompositeDisposable disposables)
+		{
+			base.OnOpen(disposables);
+
+			CurrentBackendMajorVersion = WasabiClient.ApiVersion.ToString();
+		}
 	}
 }

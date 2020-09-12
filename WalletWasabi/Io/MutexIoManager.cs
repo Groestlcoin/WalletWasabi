@@ -3,14 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using WalletWasabi.Helpers;
+using WalletWasabi.Crypto;
 
 namespace WalletWasabi.Io
 {
 	public class MutexIoManager : IoManager
 	{
-		public AsyncMutex Mutex { get; }
-
 		public MutexIoManager(string filePath) : base(filePath)
 		{
 			var shortHash = HashHelpers.GenerateSha256Hash(FilePath).Substring(0, 7);
@@ -26,5 +24,7 @@ namespace WalletWasabi.Io
 			// That is, the prefix names "Global\" and "Local\" describe the scope of the mutex name relative to terminal server sessions, not relative to processes.
 			Mutex = new AsyncMutex($"{FileNameWithoutExtension}-{shortHash}");
 		}
+
+		public AsyncMutex Mutex { get; }
 	}
 }

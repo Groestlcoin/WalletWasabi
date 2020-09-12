@@ -8,14 +8,9 @@ namespace WalletWasabi.Logging
 {
 	public class BenchmarkLogger : IDisposable
 	{
-		private LogLevel LogLevel { get; }
-		public Stopwatch Stopwatch { get; }
+		private bool _disposedValue = false; // To detect redundant calls
 
-		public string OperationName { get; }
-		public string CallerFilePath { get; }
-		public int CallerLineNumber { get; }
-
-		private BenchmarkLogger(LogLevel logLevel = LogLevel.Info, [CallerMemberName]string operationName = "", [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = -1)
+		private BenchmarkLogger(LogLevel logLevel = LogLevel.Info, [CallerMemberName] string operationName = "", [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = -1)
 		{
 			LogLevel = logLevel;
 			OperationName = operationName;
@@ -25,19 +20,24 @@ namespace WalletWasabi.Logging
 			Stopwatch = Stopwatch.StartNew();
 		}
 
+		private LogLevel LogLevel { get; }
+		public Stopwatch Stopwatch { get; }
+
+		public string OperationName { get; }
+		public string CallerFilePath { get; }
+		public int CallerLineNumber { get; }
+
 		/// <summary>
 		/// Logs the time between the creation of the class and the disposing of the class.
 		/// Example usage: using(BenchmarkLogger.Measure()){}
 		/// </summary>
 		/// <param name="operationName">Which operation to measure. Default is the caller function name.</param>
-		public static IDisposable Measure(LogLevel logLevel = LogLevel.Info, [CallerMemberName]string operationName = "", [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = -1)
+		public static IDisposable Measure(LogLevel logLevel = LogLevel.Info, [CallerMemberName] string operationName = "", [CallerFilePath] string callerFilePath = "", [CallerLineNumber] int callerLineNumber = -1)
 		{
 			return new BenchmarkLogger(logLevel, operationName, callerFilePath, callerLineNumber);
 		}
 
 		#region IDisposable Support
-
-		private bool _disposedValue = false; // To detect redundant calls
 
 		protected virtual void Dispose(bool disposing)
 		{

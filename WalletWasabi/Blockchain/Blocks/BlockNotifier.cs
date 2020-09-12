@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using WalletWasabi.Bases;
 using WalletWasabi.BitcoinCore;
+using WalletWasabi.BitcoinCore.Rpc;
 using WalletWasabi.Blockchain.P2p;
 using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
@@ -18,6 +19,17 @@ namespace WalletWasabi.Blockchain.Blocks
 {
 	public class BlockNotifier : PeriodicRunner
 	{
+		public BlockNotifier(TimeSpan period, IRPCClient rpcClient, P2pNode p2pNode = null) : base(period)
+		{
+			RpcClient = Guard.NotNull(nameof(rpcClient), rpcClient);
+			P2pNode = p2pNode;
+			ProcessedBlocks = new List<uint256>();
+			if (p2pNode is { })
+			{
+				p2pNode.BlockInv += P2pNode_BlockInv;
+			}
+		}
+
 		public event EventHandler<Block> OnBlock;
 
 		public event EventHandler<uint256> OnReorg;
@@ -29,17 +41,6 @@ namespace WalletWasabi.Blockchain.Blocks
 
 		public P2pNode P2pNode { get; }
 		public uint256 BestBlockHash { get; private set; }
-
-		public BlockNotifier(TimeSpan period, IRPCClient rpcClient, P2pNode p2pNode = null) : base(period)
-		{
-			RpcClient = Guard.NotNull(nameof(rpcClient), rpcClient);
-			P2pNode = p2pNode;
-			ProcessedBlocks = new List<uint256>();
-			if (p2pNode is { })
-			{
-				p2pNode.BlockInv += P2pNode_BlockInv;
-			}
-		}
 
 		private uint256 LastInv { get; set; } = null;
 		private object LastInvLock { get; } = new object();
@@ -131,7 +132,7 @@ namespace WalletWasabi.Blockchain.Blocks
 			// Else let's sort out things.
 			var foundPrevBlock = ProcessedBlocks.FirstOrDefault(x => x == arrivedHeader.HashPrevBlock);
 			// Missed notifications on some previous blocks.
-			if (foundPrevBlock != null)
+			if (foundPrevBlock is { })
 			{
 				// Reorg happened.
 				ReorgToBlock(foundPrevBlock);
@@ -180,7 +181,7 @@ namespace WalletWasabi.Blockchain.Blocks
 
 				// If we found the proper chain.
 				var foundPrevBlock = ProcessedBlocks.FirstOrDefault(x => x == currentHeader.HashPrevBlock);
-				if (foundPrevBlock != null)
+				if (foundPrevBlock is { })
 				{
 					// If the last block hash is not what we found, then we missed a reorg also.
 					if (foundPrevBlock != ProcessedBlocks.Last())

@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WalletWasabi.Blockchain.Analysis.Clustering;
 using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
 
@@ -13,22 +14,27 @@ namespace WalletWasabi.Blockchain.Transactions
 {
 	public class AllTransactionStore
 	{
+		public AllTransactionStore(string workFolderPath, Network network)
+		{
+			WorkFolderPath = Guard.NotNullOrEmptyOrWhitespace(nameof(workFolderPath), workFolderPath, trim: true);
+			IoHelpers.EnsureDirectoryExists(WorkFolderPath);
+
+			Network = Guard.NotNull(nameof(network), network);
+		}
+
 		#region Initializers
 
 		private string WorkFolderPath { get; set; }
-		private Network Network { get; set; }
+		private Network Network { get; }
 
 		public TransactionStore MempoolStore { get; private set; }
 		public TransactionStore ConfirmedStore { get; private set; }
 		private object Lock { get; set; }
 
-		public async Task InitializeAsync(string workFolderPath, Network network, bool ensureBackwardsCompatibility = true)
+		public async Task InitializeAsync(bool ensureBackwardsCompatibility = true)
 		{
 			using (BenchmarkLogger.Measure())
 			{
-				WorkFolderPath = Guard.NotNullOrEmptyOrWhitespace(nameof(workFolderPath), workFolderPath, trim: true);
-				Network = Guard.NotNull(nameof(network), network);
-
 				MempoolStore = new TransactionStore();
 				ConfirmedStore = new TransactionStore();
 				Lock = new object();
@@ -185,7 +191,7 @@ namespace WalletWasabi.Blockchain.Transactions
 
 		#region Accessors
 
-		public bool TryGetTransaction(uint256 hash, out SmartTransaction sameStx)
+		public virtual bool TryGetTransaction(uint256 hash, out SmartTransaction sameStx)
 		{
 			lock (Lock)
 			{
@@ -252,6 +258,8 @@ namespace WalletWasabi.Blockchain.Transactions
 				return reorgedTxs;
 			}
 		}
+
+		public IEnumerable<SmartLabel> GetLabels() => GetTransactions().Select(x => x.Label);
 
 		#endregion Accessors
 	}

@@ -22,12 +22,12 @@ namespace WalletWasabi.Backend
 {
 	public class Startup
 	{
-		public IConfiguration Configuration { get; }
-
 		public Startup(IConfiguration configuration)
 		{
 			Configuration = configuration;
 		}
+
+		public IConfiguration Configuration { get; }
 
 		// This method gets called by the runtime. Use this method to add services to the container.
 		public void ConfigureServices(IServiceCollection services)
@@ -50,7 +50,7 @@ namespace WalletWasabi.Backend
 				{
 					Version = $"v{Constants.BackendMajorVersion}",
 					Title = "GroestlMix Wallet API",
-					Description = "Privacy focused, ZeroLink compliant Groestlcoin Web API.",
+					Description = "Privacy focused Groestlcoin Web API.",
 					License = new OpenApiLicense { Name = "Use under MIT.", Url = new Uri("https://github.com/Groestlcoin/WalletWasabi/blob/master/LICENSE.md") }
 				});
 
@@ -80,7 +80,7 @@ namespace WalletWasabi.Backend
 			app.UseSwagger();
 
 			// Enable middleware to serve swagger-ui (HTML, JS, CSS, etc.), specifying the Swagger JSON endpoint.
-			app.UseSwaggerUI(c => c.SwaggerEndpoint($"/swagger/v{Constants.BackendMajorVersion}/swagger.json", "GroestlMix Wallet API V3"));
+			app.UseSwaggerUI(c => c.SwaggerEndpoint($"/swagger/v{Constants.BackendMajorVersion}/swagger.json", $"GroestlMix Wallet API V{Constants.BackendMajorVersion}"));
 
 			app.UseRouting();
 

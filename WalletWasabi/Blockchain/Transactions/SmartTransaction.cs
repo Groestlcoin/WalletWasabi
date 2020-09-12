@@ -14,6 +14,28 @@ namespace WalletWasabi.Blockchain.Transactions
 	[JsonObject(MemberSerialization.OptIn)]
 	public class SmartTransaction : IEquatable<SmartTransaction>
 	{
+		#region Constructors
+
+		public SmartTransaction(Transaction transaction, Height height, uint256 blockHash = null, int blockIndex = 0, SmartLabel label = null, bool isReplacement = false, DateTimeOffset firstSeen = default)
+		{
+			Transaction = transaction;
+
+			// Because we don't modify those transactions, we can cache the hash
+			Transaction.PrecomputeHash(false, true);
+
+			Label = label ?? SmartLabel.Empty;
+
+			Height = height;
+			BlockHash = blockHash;
+			BlockIndex = blockIndex;
+
+			FirstSeen = firstSeen == default ? DateTimeOffset.UtcNow : firstSeen;
+
+			IsReplacement = isReplacement;
+		}
+
+		#endregion Constructors
+
 		#region Members
 
 		[JsonProperty]
@@ -75,33 +97,13 @@ namespace WalletWasabi.Blockchain.Transactions
 
 		#endregion Members
 
-		#region Constructors
-
-		public SmartTransaction(Transaction transaction, Height height, uint256 blockHash = null, int blockIndex = 0, SmartLabel label = null, bool isReplacement = false, DateTimeOffset firstSeen = default)
-		{
-			Transaction = transaction;
-			// Because we don't modify those transactions, we can cache the hash
-			Transaction.PrecomputeHash(false, true);
-
-			Label = label ?? SmartLabel.Empty;
-
-			Height = height;
-			BlockHash = blockHash;
-			BlockIndex = blockIndex;
-
-			FirstSeen = firstSeen == default ? DateTimeOffset.UtcNow : firstSeen;
-
-			IsReplacement = isReplacement;
-		}
-
-		#endregion Constructors
-
 		/// <summary>
 		/// Update the transaction with the data acquired from another transaction. (For example merge their labels.)
 		/// </summary>
 		public bool TryUpdate(SmartTransaction tx)
 		{
 			var updated = false;
+
 			// If this is not the same tx, then don't update.
 			if (this != tx)
 			{
@@ -117,7 +119,7 @@ namespace WalletWasabi.Blockchain.Transactions
 					updated = true;
 				}
 
-				if (tx.BlockHash != null && BlockHash != tx.BlockHash)
+				if (tx.BlockHash is { } && BlockHash != tx.BlockHash)
 				{
 					BlockHash = tx.BlockHash;
 					BlockIndex = tx.BlockIndex;
@@ -185,7 +187,8 @@ namespace WalletWasabi.Blockchain.Transactions
 		{
 			// GetHash is also serialized, so file can be interpreted with our eyes better.
 
-			return string.Join(':',
+			return string.Join(
+				':',
 				GetHash(),
 				Transaction.ToHex(),
 				Height,
@@ -208,7 +211,7 @@ namespace WalletWasabi.Blockchain.Transactions
 
 			try
 			{
-				// First is redundand txhash serialization.
+				// First is redundant txhash serialization.
 				var heightString = parts[2];
 				var blockHashString = parts[3];
 				var blockIndexString = parts[4];

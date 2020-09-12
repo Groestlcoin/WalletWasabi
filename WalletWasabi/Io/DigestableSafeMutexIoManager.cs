@@ -6,6 +6,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Nito.AsyncEx;
+using WalletWasabi.Crypto;
 using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
 
@@ -16,13 +17,6 @@ namespace WalletWasabi.Io
 	/// </summary>
 	public class DigestableSafeMutexIoManager : SafeMutexIoManager
 	{
-		public string DigestFilePath { get; }
-
-		/// <summary>
-		/// Use the random index of the line to create digest faster. -1 is special value, it means the last character. If null then hash whole file.
-		/// </summary>
-		private int? DigestRandomIndex { get; }
-
 		private const string DigestExtension = ".dig";
 
 		/// <param name="digestRandomIndex">Use the random index of the line to create digest faster. -1 is special value, it means the last character. If null then hash whole file.</param>
@@ -33,6 +27,13 @@ namespace WalletWasabi.Io
 
 			DigestFilePath = $"{FilePath}{DigestExtension}";
 		}
+
+		public string DigestFilePath { get; }
+
+		/// <summary>
+		/// Gets a random index of the line to create digest faster. -1 is special value, it means the last character. If null then hash whole file.
+		/// </summary>
+		private int? DigestRandomIndex { get; }
 
 		#region IoOperations
 
@@ -100,12 +101,9 @@ namespace WalletWasabi.Io
 					var lineTask = sr.ReadLineAsync();
 					Task wTask = Task.CompletedTask;
 					string line = null;
-					while (lineTask != null)
+					while (lineTask is { })
 					{
-						if (line is null)
-						{
-							line = await lineTask.ConfigureAwait(false);
-						}
+						line ??= await lineTask.ConfigureAwait(false);
 
 						lineTask = sr.EndOfStream ? null : sr.ReadLineAsync();
 

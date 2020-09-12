@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WalletWasabi.Crypto;
 
 namespace WalletWasabi.Helpers
 {
@@ -23,32 +24,18 @@ namespace WalletWasabi.Helpers
 			return HashHelpers.GenerateSha256Hash(sb.ToString());
 		}
 
-		private static readonly Money[] ReasonableFees = new[]
+		/// <exception cref="InvalidOperationException">If valid output value cannot be created with the given parameters.</exception>
+		/// <returns>Sum of outputs' values. Sum of inputs' values - the calculated fee.</returns>
+		public static Money TakeFee(IEnumerable<Coin> inputs, int outputCount, Money feePerInputs, Money feePerOutputs)
 		{
-			Money.Coins(0.002m),
-			Money.Coins(0.001m),
-			Money.Coins(0.0005m),
-			Money.Coins(0.0002m),
-			Money.Coins(0.0001m),
-			Money.Coins(0.00005m),
-			Money.Coins(0.00002m),
-			Money.Coins(0.00001m)
-		};
-
-		public static Money TakeAReasonableFee(Money inputValue)
-		{
-			Money half = inputValue / 2;
-
-			foreach (Money fee in ReasonableFees)
+			var inputValue = inputs.Sum(coin => coin.TxOut.Value);
+			var fee = inputs.Count() * feePerInputs + outputCount * feePerOutputs;
+			Money outputSum = inputValue - fee;
+			if (outputSum < Money.Zero)
 			{
-				Money diff = inputValue - fee;
-				if (diff > half)
-				{
-					return diff;
-				}
+				throw new InvalidOperationException($"{nameof(outputSum)} cannot be negative.");
 			}
-
-			return half;
+			return outputSum;
 		}
 
 		public static int CalculateVsizeAssumeSegwit(int inNum, int outNum)
@@ -115,6 +102,30 @@ namespace WalletWasabi.Helpers
 			return ba;
 		}
 
+		public static Key BetterParseKey(string keyString)
+		{
+			keyString = Guard.NotNullOrEmptyOrWhitespace(nameof(keyString), keyString, trim: true);
+
+			Key k;
+			try
+			{
+				k = Key.Parse(keyString, Network.Main);
+			}
+			catch
+			{
+				try
+				{
+					k = Key.Parse(keyString, Network.TestNet);
+				}
+				catch
+				{
+					k = Key.Parse(keyString, Network.RegTest);
+				}
+			}
+
+			return k;
+		}
+
 		public static async Task<AddressManager> LoadAddressManagerFromPeerFileAsync(string filePath, Network expectedNetwork = null)
 		{
 			byte[] data, hash;
@@ -135,7 +146,7 @@ namespace WalletWasabi.Helpers
 			BitcoinStream stream = new BitcoinStream(data) { Type = SerializationType.Disk };
 			uint magic = 0;
 			stream.ReadWrite(ref magic);
-			if (expectedNetwork != null && expectedNetwork.Magic != magic)
+			if (expectedNetwork is { } && expectedNetwork.Magic != magic)
 			{
 				throw new FormatException("This file is not for the expected network");
 			}

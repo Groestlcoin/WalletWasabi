@@ -14,29 +14,31 @@
       <SolidColorBrush x:Key="WarningMessageForeground">#FFDD00</SolidColorBrush>
       <SolidColorBrush x:Key="GreenBrush">#00DD10</SolidColorBrush>
 
-      <SolidColorBrush x:Key="NotificationCardBackgroundBrush" Color="#444444" Opacity="0.75"/>
-      <SolidColorBrush x:Key="NotificationCardInformationBackgroundBrush" Color="#007ACC" Opacity="0.75"/>
-      <SolidColorBrush x:Key="NotificationCardSuccessBackgroundBrush" Color="#1F9E45" Opacity="0.75"/>
-      <SolidColorBrush x:Key="NotificationCardWarningBackgroundBrush" Color="#FDB328" Opacity="0.75"/>
-      <SolidColorBrush x:Key="NotificationCardErrorBackgroundBrush" Color="#BD202C" Opacity="0.75"/>
-      
+      <SolidColorBrush x:Key="NotificationCardBackgroundBrush" Color="#444444" Opacity="0.75" />
+      <SolidColorBrush x:Key="NotificationCardInformationBackgroundBrush" Color="#007ACC" Opacity="0.75" />
+      <SolidColorBrush x:Key="NotificationCardSuccessBackgroundBrush" Color="#1F9E45" Opacity="0.75" />
+      <SolidColorBrush x:Key="NotificationCardWarningBackgroundBrush" Color="#FDB328" Opacity="0.75" />
+      <SolidColorBrush x:Key="NotificationCardErrorBackgroundBrush" Color="#BD202C" Opacity="0.75" />
+
       <sys:Double x:Key="FontSizeSmall">12</sys:Double>
       <sys:Double x:Key="FontSizeNormal">14</sys:Double>
       <sys:Double x:Key="FontSizeLarge">16</sys:Double>
       <FontFamily x:Key="MonospacedFont">avares://WalletWasabi.Gui/Assets#Cascadia Mono</FontFamily>
       <converters:ErrorSeverityColorConverter x:Key="ErrorSeverityColorConverter" />
       <converters:ErrorDescriptorToBorderColorConverter x:Key="ErrorDescriptorToBorderColorConverter" />
+      
+      <Thickness x:Key="PageRootPadding">15 0 30 0</Thickness>
     </Style.Resources>
   </Style>
 
   <Style Selector="shellext|DocumentTabControl /template/ TabStripItem">
-    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="VerticalContentAlignment" Value="Center" />
   </Style>
-  
+
   <Style Selector="NotificationCard/template/ ContentControl#PART_Content">
     <Setter Property="MinHeight" Value="50" />
   </Style>
-  
+
   <Style Selector="shell|MetroWindow /template/ Button#minimiseButton">
     <Setter Property="Content">
       <Template>
@@ -92,7 +94,7 @@
       </Template>
     </Setter>
   </Style>
-  <Style Selector="TextBox.monospaceFont">
+  <Style Selector="TextBox.monospaceFont /template/ TextPresenter#PART_TextPresenter">
     <Setter Property="FontFamily" Value="{StaticResource MonospacedFont}" />
     <Setter Property="FontSize" Value="14" />
   </Style>
@@ -100,10 +102,30 @@
     <Setter Property="FontFamily" Value="{StaticResource MonospacedFont}" />
     <Setter Property="FontSize" Value="14" />
   </Style>
+  <Style Selector=":is(TextBox).Transparent">
+    <Setter Property="Background" Value="Transparent" /> 
+  </Style>
+  <Style Selector="TextBox.largeHeader">
+    <Setter Property="FontWeight" Value="Bold" />
+    <Setter Property="FontSize" Value="18" />
+    <Setter Property="Margin" Value="0,0,0,25" />
+    <Setter Property="BorderThickness" Value="0" />
+    <Setter Property="AcceptsReturn" Value="True" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+  </Style>
   <Style Selector="TextBox.selectableTextBlock">
     <Setter Property="Padding" Value="0" />
     <Setter Property="BorderThickness" Value="0" />
     <Setter Property="IsReadOnly" Value="True" />
+  </Style>
+  <Style Selector=":is(TextBox):pointerover /template/ Border#border">
+    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderHighBrush}" />
+  </Style>
+  <Style Selector=":is(TextBox):focus /template/ Border#border">
+    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderHighBrush}" />
+  </Style>
+  <Style Selector=":is(TextBox):error /template/ Border#border">
+    <Setter Property="BorderBrush" Value="{Binding $parent.(DataValidationErrors.Errors), Converter={StaticResource ErrorDescriptorToBorderColorConverter}}" />
   </Style>
   <Style Selector="Control.docTabContainer">
     <Setter Property="Margin" Value="20" />
@@ -146,6 +168,7 @@
   <Style Selector="TextBox">
     <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderHighBrush}" />
   </Style>
+
   <Style Selector="DataValidationErrors">
     <Setter Property="Template">
       <ControlTemplate>
@@ -178,76 +201,7 @@
       </DataTemplate>
     </Setter>
   </Style>
-  <Style Selector="TextBox:pointerover /template/ Border#border">
-    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderHighBrush}" />
-  </Style>
-  <Style Selector="TextBox:focus /template/ Border#border">
-    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderHighBrush}" />
-  </Style>
-  <Style Selector="TextBox:error /template/ Border#border">
-    <Setter Property="BorderBrush" Value="{Binding $parent[TextBox].(DataValidationErrors.Errors), Converter={StaticResource ErrorDescriptorToBorderColorConverter}}" />
-  </Style>
-  <Style Selector="TextBox">
-    <Setter Property="Background" Value="{DynamicResource ThemeBackgroundBrush}" />
-    <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderMidBrush}" />
-    <Setter Property="BorderThickness" Value="{DynamicResource ThemeBorderThickness}" />
-    <Setter Property="SelectionBrush" Value="{DynamicResource HighlightBrush}"/>
-    <Setter Property="SelectionForegroundBrush" Value="{DynamicResource HighlightForegroundBrush}"/>
-    <Setter Property="Padding" Value="4" />
-    <Setter Property="Template">
-      <ControlTemplate>
-        <DockPanel LastChildFill="True">
-          <Border
-            Name="border"
-            Background="{TemplateBinding Background}"
-            BorderBrush="{TemplateBinding BorderBrush}"
-            BorderThickness="{TemplateBinding BorderThickness}"
-            DockPanel.Dock="Top">
-            <DockPanel Margin="{TemplateBinding Padding}">
-              <TextBlock
-                Name="floatingWatermark"
-                Foreground="{DynamicResource ThemeAccentBrush}"
-                FontSize="{DynamicResource FontSizeSmall}"
-                Text="{TemplateBinding Watermark}" DockPanel.Dock="Top">
-                <TextBlock.IsVisible>
-                  <MultiBinding Converter="{x:Static BoolConverters.And}">
-                    <Binding RelativeSource="{RelativeSource TemplatedParent}" Path="UseFloatingWatermark" />
-                    <Binding RelativeSource="{RelativeSource TemplatedParent}" Path="Text" Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
-                  </MultiBinding>
-                </TextBlock.IsVisible>
-              </TextBlock>
-              <ScrollViewer
-                HorizontalScrollBarVisibility="{TemplateBinding (ScrollViewer.HorizontalScrollBarVisibility)}"
-                VerticalScrollBarVisibility="{TemplateBinding (ScrollViewer.VerticalScrollBarVisibility)}">
-                <Panel>
-                  <TextBlock
-                    Name="watermark"
-                    Opacity="0.5"
-                    Text="{TemplateBinding Watermark}"
-                    IsVisible="{TemplateBinding Text, Converter={x:Static StringConverters.IsNullOrEmpty}}" />
-                  <TextPresenter
-                    Name="PART_TextPresenter"
-                    Text="{TemplateBinding Text, Mode=TwoWay}"
-                    CaretIndex="{TemplateBinding CaretIndex}"
-                    SelectionStart="{TemplateBinding SelectionStart}"
-                    SelectionEnd="{TemplateBinding SelectionEnd}"
-                    TextAlignment="{TemplateBinding TextAlignment}"
-                    TextWrapping="{TemplateBinding TextWrapping}"
-                    PasswordChar="{TemplateBinding PasswordChar}"
-                    SelectionBrush="{TemplateBinding SelectionBrush}"
-                    SelectionForegroundBrush="{TemplateBinding SelectionForegroundBrush}"
-                    CaretBrush="{TemplateBinding CaretBrush}"/>
-                </Panel>
-              </ScrollViewer>
-            </DockPanel>
-          </Border>
-          <Border Margin="{TemplateBinding Padding}" BorderThickness="{TemplateBinding BorderThickness}" BorderBrush="{TemplateBinding Background}">
-            <DataValidationErrors />
-          </Border>
-        </DockPanel>
-      </ControlTemplate>
-    </Setter>
-  </Style>
+
   <Style Selector="ListBoxItem:pointerover Grid Expander /template/ ToggleButton#PART_toggle /template/ Border > Grid > Border">
     <Setter Property="Background" Value="{DynamicResource ThemeControlHighlightMidBrush}" />
   </Style>
@@ -270,9 +224,25 @@
     <Setter Property="Background" Value="{DynamicResource ThemeBackgroundBrush}" />
   </Style>
 
-  <!-- Dock doesnt have feature to disable resizing. Make the Splitters that allow resize
+  <!-- Dock doesn't have feature to disable resizing. Make the Splitters that allow resize
        not visible to hit testing, in order to disable them.-->
   <Style Selector="dock|ProportionalStackPanelSplitter">
     <Setter Property="IsHitTestVisible" Value="False" />
+  </Style>
+
+  <Style Selector="shell|MetroWindow.ToolWindow /template/ Button#minimiseButton">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="shell|MetroWindow.ToolWindow /template/ Button#restoreButton">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="shell|MetroWindow.ToolWindow /template/ Image">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="shell|MetroWindow.ToolWindow /template/ Border > VisualLayerManager > Grid > Grid > Grid > Grid > TextBlock">
+    <Setter Property="IsVisible" Value="False" />
+  </Style>
+  <Style Selector="shell|MetroWindow.ToolWindow /template/ DockPanel#titlebar > ContentControl">
+    <Setter Property="IsVisible" Value="False" />
   </Style>
 </Styles>

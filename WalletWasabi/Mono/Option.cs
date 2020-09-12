@@ -123,8 +123,8 @@
 //      var p = new OptionSet () {
 //        { "a", s => a = s },
 //      };
-//      p.Parse (new string[]{"-a"});   // sets v != null
-//      p.Parse (new string[]{"-a+"});  // sets v != null
+//      p.Parse (new string[]{"-a"});   // sets v is { }
+//      p.Parse (new string[]{"-a+"});  // sets v is { }
 //      p.Parse (new string[]{"-a-"});  // sets v is null
 //
 
@@ -165,6 +165,8 @@ namespace Mono.Options
 {
 	public abstract class Option
 	{
+		private static readonly char[] NameTerminator = new char[] { '=', ':' };
+
 		protected Option(string prototype, string description)
 			: this(prototype, description, 1, false)
 		{
@@ -228,6 +230,9 @@ namespace Mono.Options
 		public int MaxValueCount { get; }
 		public bool Hidden { get; }
 
+		public string[] Names { get; }
+		public string[] ValueSeparators { get; private set; }
+
 		public string[] GetNames()
 		{
 			return (string[])Names.Clone();
@@ -258,7 +263,7 @@ namespace Mono.Options
 			T t = default;
 			try
 			{
-				if (value != null)
+				if (value is { })
 				{
 					TypeConverter conv = TypeDescriptor.GetConverter(targetType);
 					t = (T)conv.ConvertFromString(value);
@@ -272,11 +277,6 @@ namespace Mono.Options
 			}
 			return t;
 		}
-
-		public string[] Names { get; }
-		public string[] ValueSeparators { get; private set; }
-
-		private static readonly char[] NameTerminator = new char[] { '=', ':' };
 
 		private OptionValueType ParsePrototype()
 		{

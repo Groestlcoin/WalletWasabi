@@ -9,13 +9,13 @@ namespace WalletWasabi.Gui.Shell.MainMenu
 {
 	internal class HelpMainMenuItems
 	{
-		private IMenuItemFactory MenuItemFactory { get; }
-
 		[ImportingConstructor]
 		public HelpMainMenuItems(IMenuItemFactory menuItemFactory)
 		{
 			MenuItemFactory = menuItemFactory;
 		}
+
+		private IMenuItemFactory MenuItemFactory { get; }
 
 		#region MainMenu
 
@@ -48,10 +48,10 @@ namespace WalletWasabi.Gui.Shell.MainMenu
 		[DefaultGroup("About")]
 		public IMenuItem About => MenuItemFactory.CreateCommandMenuItem("Help.About");
 
-		[ExportMainMenuItem("Help", "Customer Support")]
+		[ExportMainMenuItem("Help", "User Support")]
 		[DefaultOrder(1)]
 		[DefaultGroup("Support")]
-		public IMenuItem CustomerSupport => MenuItemFactory.CreateCommandMenuItem("Help.CustomerSupport");
+		public IMenuItem UserSupport => MenuItemFactory.CreateCommandMenuItem("Help.UserSupport");
 
 		[ExportMainMenuItem("Help", "Report Bug")]
 		[DefaultOrder(2)]

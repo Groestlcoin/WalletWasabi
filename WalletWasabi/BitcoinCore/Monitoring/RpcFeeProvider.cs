@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using NBitcoin;
 using NBitcoin.RPC;
 using WalletWasabi.Bases;
+using WalletWasabi.BitcoinCore.Rpc;
 using WalletWasabi.Blockchain.Analysis.FeesEstimation;
 using WalletWasabi.Helpers;
 
@@ -13,9 +14,14 @@ namespace WalletWasabi.BitcoinCore.Monitoring
 {
 	public class RpcFeeProvider : PeriodicRunner, IFeeProvider
 	{
-		public event EventHandler<AllFeeEstimate> AllFeeEstimateChanged;
-
 		private AllFeeEstimate _allFeeEstimate;
+
+		public RpcFeeProvider(TimeSpan period, IRPCClient rpcClient) : base(period)
+		{
+			RpcClient = Guard.NotNull(nameof(rpcClient), rpcClient);
+		}
+
+		public event EventHandler<AllFeeEstimate> AllFeeEstimateChanged;
 
 		public AllFeeEstimate AllFeeEstimate
 		{
@@ -30,12 +36,7 @@ namespace WalletWasabi.BitcoinCore.Monitoring
 			}
 		}
 
-		public RPCClient RpcClient { get; set; }
-
-		public RpcFeeProvider(TimeSpan period, RPCClient rpcClient) : base(period)
-		{
-			RpcClient = Guard.NotNull(nameof(rpcClient), rpcClient);
-		}
+		public IRPCClient RpcClient { get; set; }
 
 		protected override async Task ActionAsync(CancellationToken cancel)
 		{

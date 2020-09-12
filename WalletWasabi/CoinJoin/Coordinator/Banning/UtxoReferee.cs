@@ -7,6 +7,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using WalletWasabi.BitcoinCore.Rpc;
 using WalletWasabi.CoinJoin.Coordinator.Rounds;
 using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
@@ -15,18 +16,7 @@ namespace WalletWasabi.CoinJoin.Coordinator.Banning
 {
 	public class UtxoReferee
 	{
-		private ConcurrentDictionary<OutPoint, BannedUtxo> BannedUtxos { get; }
-
-		public string BannedUtxosFilePath => Path.Combine(FolderPath, $"BannedUtxos{Network}.txt");
-
-		public RPCClient RpcClient { get; }
-		public Network Network { get; }
-
-		public CoordinatorRoundConfig RoundConfig { get; }
-
-		public string FolderPath { get; }
-
-		public UtxoReferee(Network network, string folderPath, RPCClient rpc, CoordinatorRoundConfig roundConfig)
+		public UtxoReferee(Network network, string folderPath, IRPCClient rpc, CoordinatorRoundConfig roundConfig)
 		{
 			Network = Guard.NotNull(nameof(network), network);
 			FolderPath = Guard.NotNullOrEmptyOrWhitespace(nameof(folderPath), folderPath, trim: true);
@@ -47,7 +37,7 @@ namespace WalletWasabi.CoinJoin.Coordinator.Banning
 					{
 						var bannedRecord = BannedUtxo.FromString(line);
 
-						GetTxOutResponse getTxOutResponse = RpcClient.GetTxOut(bannedRecord.Utxo.Hash, (int)bannedRecord.Utxo.N, includeMempool: true);
+						GetTxOutResponse getTxOutResponse = RpcClient.GetTxOutAsync(bannedRecord.Utxo.Hash, (int)bannedRecord.Utxo.N, includeMempool: true).GetAwaiter().GetResult();
 
 						// Check if inputs are unspent.
 						if (getTxOutResponse is null)
@@ -80,6 +70,17 @@ namespace WalletWasabi.CoinJoin.Coordinator.Banning
 			}
 		}
 
+		private ConcurrentDictionary<OutPoint, BannedUtxo> BannedUtxos { get; }
+
+		public string BannedUtxosFilePath => Path.Combine(FolderPath, $"BannedUtxos{Network}.txt");
+
+		public IRPCClient RpcClient { get; }
+		public Network Network { get; }
+
+		public CoordinatorRoundConfig RoundConfig { get; }
+
+		public string FolderPath { get; }
+
 		public async Task BanUtxosAsync(int severity, DateTimeOffset timeOfBan, bool forceNoted, long bannedForRound, params OutPoint[] toBan)
 		{
 			if (RoundConfig.DosSeverity == 0)
@@ -107,7 +108,7 @@ namespace WalletWasabi.CoinJoin.Coordinator.Banning
 				{
 					if (RoundConfig.DosNoteBeforeBan)
 					{
-						if (foundElem != null)
+						if (foundElem is { })
 						{
 							isNoted = false;
 						}

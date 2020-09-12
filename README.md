@@ -8,7 +8,10 @@ The main privacy features on the network level:
 and on the blockchain level:
 - Intuitive ZeroLink CoinJoin integration.
 - Superb coin selection and labeling.
+- Opt-in PayJoin.
 - Dust attack protections.
+- Custom change address.
+- Anti wallet fingerprinting.
 
 For more information, please check out the [GroestlMix Documentation](https://groestlcoin.org/forum), an archive of knowledge about the nuances of Groestlcoin privacy and how to properly use GroestlMix.
 

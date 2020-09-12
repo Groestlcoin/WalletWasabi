@@ -6,16 +6,7 @@ namespace WalletWasabi.BitcoinCore.Monitoring
 {
 	public class RpcStatus : IEquatable<RpcStatus>
 	{
-		public string Status { get; }
-		public bool Success { get; }
-		public ulong Headers { get; }
-		public ulong Blocks { get; }
-		public int PeersCount { get; }
-		public bool Synchronized { get; }
-
 		public static RpcStatus Unresponsive = new RpcStatus(false, 0, 0, 0);
-
-		public static RpcStatus Responsive(ulong headers, ulong blocks, int peersCount) => new RpcStatus(true, headers, blocks, peersCount);
 
 		private RpcStatus(bool success, ulong headers, ulong blocks, int peersCount)
 		{
@@ -25,21 +16,21 @@ namespace WalletWasabi.BitcoinCore.Monitoring
 				var diff = headers - blocks;
 				if (peersCount == 0)
 				{
-					Status = "Groestlcoin Core is connecting...";
+					Status = "Full node is connecting...";
 				}
 				else if (diff == 0)
 				{
 					Synchronized = true;
-					Status = "Groestlcoin Core is synchronized";
+					Status = "Full node is synchronized";
 				}
 				else
 				{
-					Status = $"Groestlcoin Core is downloading {diff} blocks...";
+					Status = $"Full node is downloading {diff} blocks...";
 				}
 			}
 			else
 			{
-				Status = "Groestlcoin Core is unresponsive";
+				Status = "Full node is unresponsive";
 			}
 
 			Success = success;
@@ -47,6 +38,15 @@ namespace WalletWasabi.BitcoinCore.Monitoring
 			Blocks = blocks;
 			PeersCount = peersCount;
 		}
+
+		public string Status { get; }
+		public bool Success { get; }
+		public ulong Headers { get; }
+		public ulong Blocks { get; }
+		public int PeersCount { get; }
+		public bool Synchronized { get; }
+
+		public static RpcStatus Responsive(ulong headers, ulong blocks, int peersCount) => new RpcStatus(true, headers, blocks, peersCount);
 
 		public override string ToString() => Status;
 

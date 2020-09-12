@@ -5,7 +5,7 @@ using System.Collections.Generic;
 using System.Text;
 using WalletWasabi.Helpers;
 using WalletWasabi.JsonConverters;
-using static NBitcoin.Crypto.SchnorrBlinding;
+using static WalletWasabi.Crypto.SchnorrBlinding;
 
 namespace WalletWasabi.CoinJoin.Common.Crypto
 {
@@ -25,15 +25,6 @@ namespace WalletWasabi.CoinJoin.Common.Crypto
 			RpubKey = Guard.NotNull(nameof(rKey), rKey?.PubKey);
 		}
 
-		public SchnorrPubKey(Signer signer)
-		{
-			signer = Guard.NotNull(nameof(signer), signer);
-			var signerKey = signer?.Key;
-			var rKey = signer?.R;
-			SignerPubKey = Guard.NotNull(nameof(signerKey), signerKey?.PubKey);
-			RpubKey = Guard.NotNull(nameof(rKey), rKey?.PubKey);
-		}
-
 		[JsonProperty]
 		[JsonConverter(typeof(PubKeyJsonConverter))]
 		public PubKey SignerPubKey { get; }
@@ -48,7 +39,7 @@ namespace WalletWasabi.CoinJoin.Common.Crypto
 
 		public bool Equals(SchnorrPubKey other) => this == other;
 
-		public override int GetHashCode() => SignerPubKey.GetHashCode() ^ RpubKey.GetHashCode();
+		public override int GetHashCode() => (SignerPubKey, RpubKey).GetHashCode();
 
 		public static bool operator ==(SchnorrPubKey x, SchnorrPubKey y) => y?.SignerPubKey == x?.SignerPubKey && y?.RpubKey == x?.RpubKey;
 

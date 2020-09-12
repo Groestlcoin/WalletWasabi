@@ -8,6 +8,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -15,95 +16,31 @@ using WalletWasabi.Backend.Models;
 using WalletWasabi.Backend.Models.Responses;
 using WalletWasabi.Bases;
 using WalletWasabi.Blockchain.Analysis.FeesEstimation;
-using WalletWasabi.Exceptions;
 using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
 using WalletWasabi.Models;
 using WalletWasabi.Stores;
+using WalletWasabi.Tor.Exceptions;
 using WalletWasabi.WebClients.Wasabi;
 
 namespace WalletWasabi.Services
 {
 	public class WasabiSynchronizer : NotifyPropertyChangedBase, IFeeProvider
 	{
-		#region MembersPropertiesEvents
-
-		public SynchronizeResponse LastResponse { get; private set; }
-
-		public WasabiClient WasabiClient { get; private set; }
-
-		public Network Network { get; private set; }
-
 		private decimal _usdExchangeRate;
-
-		/// <summary>
-		/// The Bitcoin price in USD.
-		/// </summary>
-		public decimal UsdExchangeRate
-		{
-			get => _usdExchangeRate;
-			private set => RaiseAndSetIfChanged(ref _usdExchangeRate, value);
-		}
-
-		public event EventHandler<AllFeeEstimate> AllFeeEstimateChanged;
 
 		private AllFeeEstimate _allFeeEstimate;
 
-		public AllFeeEstimate AllFeeEstimate
-		{
-			get => _allFeeEstimate;
-			private set
-			{
-				if (RaiseAndSetIfChanged(ref _allFeeEstimate, value))
-				{
-					AllFeeEstimateChanged?.Invoke(this, value);
-				}
-			}
-		}
-
 		private TorStatus _torStatus;
 
-		public TorStatus TorStatus
-		{
-			get => _torStatus;
-			private set => RaiseAndSetIfChanged(ref _torStatus, value);
-		}
-
 		private BackendStatus _backendStatus;
-
-		public BackendStatus BackendStatus
-		{
-			get => _backendStatus;
-			private set => RaiseAndSetIfChanged(ref _backendStatus, value);
-		}
-
-		public TimeSpan MaxRequestIntervalForMixing { get; set; }
-		private long _blockRequests; // There are priority requests in queue.
-
-		public bool AreRequestsBlocked() => Interlocked.Read(ref _blockRequests) == 1;
-
-		public void BlockRequests() => Interlocked.Exchange(ref _blockRequests, 1);
-
-		public void EnableRequests() => Interlocked.Exchange(ref _blockRequests, 0);
-
-		public BitcoinStore BitcoinStore { get; private set; }
-
-		public event EventHandler<bool> ResponseArrivedIsGenSocksServFail;
-
-		public event EventHandler<SynchronizeResponse> ResponseArrived;
 
 		/// <summary>
 		/// 0: Not started, 1: Running, 2: Stopping, 3: Stopped
 		/// </summary>
 		private long _running;
 
-		public bool IsRunning => Interlocked.Read(ref _running) == 1;
-
-		private CancellationTokenSource Cancel { get; set; }
-
-		#endregion MembersPropertiesEvents
-
-		#region ConstructorsAndInitializers
+		private long _blockRequests; // There are priority requests in queue.
 
 		public WasabiSynchronizer(Network network, BitcoinStore bitcoinStore, WasabiClient client)
 		{
@@ -121,6 +58,71 @@ namespace WalletWasabi.Services
 			var client = new WasabiClient(baseUri, torSocks5EndPoint);
 			CreateNew(network, bitcoinStore, client);
 		}
+
+		#region EventsPropertiesMembers
+
+		public event EventHandler<AllFeeEstimate> AllFeeEstimateChanged;
+
+		public event EventHandler<bool> ResponseArrivedIsGenSocksServFail;
+
+		public event EventHandler<SynchronizeResponse> ResponseArrived;
+
+		public SynchronizeResponse LastResponse { get; private set; }
+
+		public WasabiClient WasabiClient { get; private set; }
+
+		public Network Network { get; private set; }
+
+		/// <summary>
+		/// Gets the Bitcoin price in USD.
+		/// </summary>
+		public decimal UsdExchangeRate
+		{
+			get => _usdExchangeRate;
+			private set => RaiseAndSetIfChanged(ref _usdExchangeRate, value);
+		}
+
+		public AllFeeEstimate AllFeeEstimate
+		{
+			get => _allFeeEstimate;
+			private set
+			{
+				if (RaiseAndSetIfChanged(ref _allFeeEstimate, value))
+				{
+					AllFeeEstimateChanged?.Invoke(this, value);
+				}
+			}
+		}
+
+		public TorStatus TorStatus
+		{
+			get => _torStatus;
+			private set => RaiseAndSetIfChanged(ref _torStatus, value);
+		}
+
+		public BackendStatus BackendStatus
+		{
+			get => _backendStatus;
+			private set => RaiseAndSetIfChanged(ref _backendStatus, value);
+		}
+
+		public TimeSpan MaxRequestIntervalForMixing { get; set; }
+
+		public BitcoinStore BitcoinStore { get; private set; }
+
+		public bool IsRunning => Interlocked.Read(ref _running) == 1;
+
+		private CancellationTokenSource Cancel { get; set; }
+
+		public bool AreRequestsBlocked() => Interlocked.Read(ref _blockRequests) == 1;
+
+		public void BlockRequests() => Interlocked.Exchange(ref _blockRequests, 1);
+
+		public void EnableRequests() => Interlocked.Exchange(ref _blockRequests, 0);
+
+		#endregion EventsPropertiesMembers
+
+		#region Initializers
 
 		private void CreateNew(Network network, BitcoinStore bitcoinStore, WasabiClient client)
 		{
@@ -170,6 +172,8 @@ namespace WalletWasabi.Services
 							}
 
 							SynchronizeResponse response;
+
+							var lastUsedApiVersion = WasabiClient.ApiVersion;
 							try
 							{
 								if (!IsRunning)
@@ -178,6 +182,7 @@ namespace WalletWasabi.Services
 								}
 
 								response = await WasabiClient.GetSynchronizeAsync(hashChain.TipHash, maxFiltersToSyncAtInitialization, estimateMode, Cancel.Token).WithAwaitCancellationAsync(Cancel.Token, 300);
+
 								// NOT GenSocksServErr
 								BackendStatus = BackendStatus.Connected;
 								TorStatus = TorStatus.Running;
@@ -197,6 +202,33 @@ namespace WalletWasabi.Services
 								HandleIfGenSocksServFail(ex);
 								throw;
 							}
+							catch (HttpRequestException ex) when (ex.Message.Contains("Not Found"))
+							{
+								TorStatus = TorStatus.Running;
+								BackendStatus = BackendStatus.NotConnected;
+								try
+								{
+									// Backend API version might be updated meanwhile. Trying to update the versions.
+									var result = await WasabiClient.CheckUpdatesAsync(Cancel.Token).ConfigureAwait(false);
+
+									// If the backend is compatible and the Api version updated then we just used the wrong API.
+									if (result.BackendCompatible && lastUsedApiVersion != WasabiClient.ApiVersion)
+									{
+										// Next request will be fine, do not throw exception.
+										ignoreRequestInterval = true;
+										continue;
+									}
+									else
+									{
+										throw ex;
+									}
+								}
+								catch (Exception x)
+								{
+									HandleIfGenSocksServFail(x);
+									throw;
+								}
+							}
 							catch (Exception ex)
 							{
 								TorStatus = TorStatus.Running;
@@ -205,7 +237,7 @@ namespace WalletWasabi.Services
 								throw;
 							}
 
-							if (response.AllFeeEstimate != null && response.AllFeeEstimate.Estimations.Any())
+							if (response.AllFeeEstimate is { } && response.AllFeeEstimate.Estimations.Any())
 							{
 								lastFeeQueried = DateTimeOffset.UtcNow;
 								AllFeeEstimate = response.AllFeeEstimate;
@@ -222,7 +254,7 @@ namespace WalletWasabi.Services
 
 							hashChain.UpdateServerTipHeight((uint)response.BestHeight);
 							ExchangeRate exchangeRate = response.ExchangeRates.FirstOrDefault();
-							if (exchangeRate != default && exchangeRate.Rate != 0)
+							if (exchangeRate is { } && exchangeRate.Rate != 0)
 							{
 								UsdExchangeRate = exchangeRate.Rate;
 							}
@@ -276,8 +308,8 @@ namespace WalletWasabi.Services
 								// Assert index state.
 								if (response.BestHeight > hashChain.TipHeight) // If the server's tip height is larger than ours, we're missing a filter, our index got corrupted.
 								{
-									await BitcoinStore.IndexStore.RemoveAllImmmatureFiltersAsync(Cancel.Token, deleteAndCrashIfMature: true);
 									// If still bad delete filters and crash the software?
+									await BitcoinStore.IndexStore.RemoveAllImmmatureFiltersAsync(Cancel.Token, deleteAndCrashIfMature: true);
 								}
 							}
 
@@ -328,7 +360,7 @@ namespace WalletWasabi.Services
 			});
 		}
 
-		#endregion ConstructorsAndInitializers
+		#endregion Initializers
 
 		#region Methods
 

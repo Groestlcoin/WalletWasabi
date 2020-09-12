@@ -87,22 +87,23 @@ namespace WalletWasabi.Tests.UnitTests.BitcoinCore
 			var ipEndPoint = whiteBind.EndPoint as IPEndPoint;
 			Assert.Equal(IPAddress.Loopback, ipEndPoint.Address);
 			Assert.Equal(18444, ipEndPoint.Port);
-			Assert.Equal(string.Empty, whiteBind.Permissions);
+			Assert.Equal("", whiteBind.Permissions);
 
 			config.AddOrUpdate("whitebind=127.0.0.1:0");
 			whiteBind = translator.TryGetWhiteBind();
 			ipEndPoint = whiteBind.EndPoint as IPEndPoint;
 			Assert.Equal(IPAddress.Loopback, ipEndPoint.Address);
 			Assert.Equal(0, ipEndPoint.Port);
-			Assert.Equal(string.Empty, whiteBind.Permissions);
+			Assert.Equal("", whiteBind.Permissions);
 
 			config.AddOrUpdate("whitebind=127.0.0.1");
 			whiteBind = translator.TryGetWhiteBind();
 			ipEndPoint = whiteBind.EndPoint as IPEndPoint;
 			Assert.Equal(IPAddress.Loopback, ipEndPoint.Address);
+
 			// Default port.
 			Assert.Equal(1331, ipEndPoint.Port);
-			Assert.Equal(string.Empty, whiteBind.Permissions);
+			Assert.Equal("", whiteBind.Permissions);
 
 			config.AddOrUpdate("whitebind=foo@127.0.0.1");
 			whiteBind = translator.TryGetWhiteBind();

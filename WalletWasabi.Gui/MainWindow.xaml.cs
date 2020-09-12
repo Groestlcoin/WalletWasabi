@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.Notifications;
 using Avalonia.Markup.Xaml;
+using AvalonStudio.Documents;
 using AvalonStudio.Extensibility;
 using AvalonStudio.Shell;
 using AvalonStudio.Shell.Controls;
@@ -9,8 +10,10 @@ using System;
 using System.ComponentModel;
 using System.Linq;
 using System.Reactive.Linq;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using WalletWasabi.Gui.Controls.WalletExplorer;
 using WalletWasabi.Gui.Dialogs;
 using WalletWasabi.Gui.Tabs.WalletManager;
 using WalletWasabi.Gui.ViewModels;
@@ -20,8 +23,6 @@ namespace WalletWasabi.Gui
 {
 	public class MainWindow : MetroWindow
 	{
-		public bool IsQuitPending { get; private set; }
-
 		public MainWindow()
 		{
 			Global = Locator.Current.GetService<Global>();
@@ -83,10 +84,8 @@ namespace WalletWasabi.Gui
 			bool closeApplication = false;
 			try
 			{
-				if (Global.ChaumianClient != null)
-				{
-					Global.ChaumianClient.IsQuitPending = true; // indicate -> do not add any more alices to the coinjoin
-				}
+				// Indicate -> do not add any more alices to the coinjoin.
+				Global.WalletManager.SignalQuitPending(true);
 
 				if (!MainWindowViewModel.Instance.CanClose)
 				{
@@ -103,13 +102,16 @@ namespace WalletWasabi.Gui
 				{
 					try
 					{
-						if (Global.UiConfig != null) // UiConfig not yet loaded.
+						if (Global.UiConfig is { }) // UiConfig not yet loaded.
 						{
 							Global.UiConfig.WindowState = WindowState;
-							Global.UiConfig.Width = Width;
-							Global.UiConfig.Height = Height;
-							Global.UiConfig.LastActiveTab = IoC.Get<IShell>().SelectedDocument?.GetType().Name;
-							await Global.UiConfig.ToFileAsync();
+
+							IDocumentTabViewModel? selectedDocument = IoC.Get<IShell>().SelectedDocument;
+							Global.UiConfig.LastActiveTab = selectedDocument is null
+								? nameof(HistoryTabViewModel)
+								: selectedDocument.GetType().Name;
+
+							Global.UiConfig.ToFile();
 							Logger.LogInfo($"{nameof(Global.UiConfig)} is saved.");
 						}
 
@@ -143,10 +145,8 @@ namespace WalletWasabi.Gui
 				if (!closeApplication) //we are not closing the application for some reason
 				{
 					Interlocked.Exchange(ref _closingState, 0);
-					if (Global.ChaumianClient != null)
-					{
-						Global.ChaumianClient.IsQuitPending = false; //re-enable enqueuing coins
-					}
+					// Re-enable enqueuing coins.
+					Global.WalletManager.SignalQuitPending(false);
 				}
 			}
 		}

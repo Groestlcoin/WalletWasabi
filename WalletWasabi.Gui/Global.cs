@@ -2,6 +2,7 @@ using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Controls.Notifications;
 using Avalonia.Threading;
+using Microsoft.Extensions.Caching.Memory;
 using NBitcoin;
 using NBitcoin.Protocol;
 using NBitcoin.Protocol.Behaviors;
@@ -19,22 +20,28 @@ using WalletWasabi.BitcoinCore;
 using WalletWasabi.BitcoinCore.Endpointing;
 using WalletWasabi.BitcoinCore.Monitoring;
 using WalletWasabi.Blockchain.Analysis.FeesEstimation;
+using WalletWasabi.Blockchain.Blocks;
 using WalletWasabi.Blockchain.Keys;
+using WalletWasabi.Blockchain.Mempool;
 using WalletWasabi.Blockchain.TransactionBroadcasting;
 using WalletWasabi.Blockchain.TransactionOutputs;
 using WalletWasabi.Blockchain.TransactionProcessing;
+using WalletWasabi.Blockchain.Transactions;
 using WalletWasabi.CoinJoin.Client;
 using WalletWasabi.CoinJoin.Client.Clients;
 using WalletWasabi.CoinJoin.Client.Clients.Queuing;
+using WalletWasabi.Gui.CrashReport;
 using WalletWasabi.Gui.Helpers;
 using WalletWasabi.Gui.Models;
 using WalletWasabi.Gui.Rpc;
 using WalletWasabi.Helpers;
 using WalletWasabi.Hwi.Models;
+using WalletWasabi.Legal;
 using WalletWasabi.Logging;
 using WalletWasabi.Services;
 using WalletWasabi.Stores;
-using WalletWasabi.TorSocks5;
+using WalletWasabi.Tor;
+using WalletWasabi.Wallets;
 
 namespace WalletWasabi.Gui
 {
@@ -45,11 +52,9 @@ namespace WalletWasabi.Gui
 
 		public string DataDir { get; }
 		public string TorLogsFile { get; }
-		public string WalletsDir { get; }
-		public string WalletBackupsDir { get; }
-
-		public BitcoinStore BitcoinStore { get; private set; }
-		public Config Config { get; private set; }
+		public BitcoinStore BitcoinStore { get; }
+		public LegalDocuments LegalDocuments { get; set; }
+		public Config Config { get; }
 
 		public string AddressManagerFilePath { get; private set; }
 		public AddressManager AddressManager { get; private set; }
@@ -57,8 +62,7 @@ namespace WalletWasabi.Gui
 		public NodesGroup Nodes { get; private set; }
 		public WasabiSynchronizer Synchronizer { get; private set; }
 		public FeeProviders FeeProviders { get; private set; }
-		public CoinJoinClient ChaumianClient { get; private set; }
-		public WalletService WalletService { get; private set; }
+		public WalletManager WalletManager { get; }
 		public TransactionBroadcaster TransactionBroadcaster { get; set; }
 		public CoinJoinProcessor CoinJoinProcessor { get; set; }
 		public Node RegTestMempoolServingNode { get; private set; }
@@ -67,128 +71,45 @@ namespace WalletWasabi.Gui
 
 		public HostedServices HostedServices { get; }
 
-		public bool KillRequested { get; private set; } = false;
+		public bool KillRequested => Interlocked.Read(ref _dispose) > 0;
 
-		public UiConfig UiConfig { get; private set; }
+		public UiConfig UiConfig { get; }
 
 		public Network Network => Config.Network;
 
-		public static JsonRpcServer RpcServer { get; private set; }
+		public MemoryCache Cache { get; private set; }
 
-		public Global()
+		public static JsonRpcServer? RpcServer { get; private set; }
+
+		public Global(string dataDir, string torLogsFile, Config config, UiConfig uiConfig, WalletManager walletManager)
 		{
-			DataDir = EnvironmentHelpers.GetDataDir(Path.Combine("GroestlMix", "Client"));
-			TorLogsFile = Path.Combine(DataDir, "TorLogs.txt");
-			WalletsDir = Path.Combine(DataDir, "Wallets");
-			WalletBackupsDir = Path.Combine(DataDir, "WalletBackups");
-
-			Directory.CreateDirectory(DataDir);
-			Directory.CreateDirectory(WalletsDir);
-			Directory.CreateDirectory(WalletBackupsDir);
-
-			HostedServices = new HostedServices();
-		}
-
-		public async Task<bool> InitializeUiConfigAsync()
-		{
-			try
+			using (BenchmarkLogger.Measure())
 			{
-				var uiConfigFilePath = Path.Combine(DataDir, "UiConfig.json");
-				var uiConfig = new UiConfig(uiConfigFilePath);
-				await uiConfig.LoadOrCreateDefaultFileAsync().ConfigureAwait(false);
-
+				CrashReporter = new CrashReporter();
+				StoppingCts = new CancellationTokenSource();
+				DataDir = dataDir;
+				Config = config;
 				UiConfig = uiConfig;
+				TorLogsFile = torLogsFile;
 
-				return true;
-			}
-			catch (Exception ex)
-			{
-				Logger.LogError(ex);
-			}
+				Logger.InitializeDefaults(Path.Combine(DataDir, "Logs.txt"));
 
-			return false;
-		}
+				HostedServices = new HostedServices();
+				WalletManager = walletManager;
 
-		private int _isDesperateDequeuing = 0;
+				LegalDocuments = LegalDocuments.TryLoadAgreed(DataDir);
 
-		public async Task TryDesperateDequeueAllCoinsAsync()
-		{
-			// If already desperate dequeuing then return.
-			// If not desperate dequeuing then make sure we're doing that.
-			if (Interlocked.CompareExchange(ref _isDesperateDequeuing, 1, 0) == 1)
-			{
-				return;
-			}
-			try
-			{
-				await DesperateDequeueAllCoinsAsync();
-			}
-			catch (NotSupportedException ex)
-			{
-				Logger.LogWarning(ex.Message);
-			}
-			catch (Exception ex)
-			{
-				Logger.LogWarning(ex);
-			}
-			finally
-			{
-				Interlocked.Exchange(ref _isDesperateDequeuing, 0);
-			}
-		}
+				WalletManager.OnDequeue += WalletManager_OnDequeue;
+				WalletManager.WalletRelevantTransactionProcessed += WalletManager_WalletRelevantTransactionProcessed;
 
-		public async Task DesperateDequeueAllCoinsAsync()
-		{
-			if (WalletService is null || ChaumianClient is null)
-			{
-				return;
-			}
+				var networkWorkFolderPath = Path.Combine(DataDir, "BitcoinStore", Network.ToString());
+				var transactionStore = new AllTransactionStore(networkWorkFolderPath, Network);
+				var indexStore = new IndexStore(Path.Combine(networkWorkFolderPath, "IndexStore"), Network, new SmartHeaderChain());
+				var mempoolService = new MempoolService();
 
-			SmartCoin[] enqueuedCoins = WalletService.Coins.CoinJoinInProcess().ToArray();
-			if (enqueuedCoins.Any())
-			{
-				Logger.LogWarning("Unregistering coins in CoinJoin process.");
-				await ChaumianClient.DequeueCoinsFromMixAsync(enqueuedCoins, DequeueReason.ApplicationExit);
-			}
-		}
+				BitcoinStore = new BitcoinStore(indexStore, transactionStore, mempoolService);
 
-		private bool InitializationCompleted { get; set; } = false;
-
-		private bool InitializationStarted { get; set; } = false;
-
-		private CancellationTokenSource StoppingCts { get; set; } = new CancellationTokenSource();
-
-		public async Task InitializeNoWalletAsync()
-		{
-			InitializationStarted = true;
-
-			try
-			{
-				WalletService = null;
-				ChaumianClient = null;
-				AddressManager = null;
-				TorManager = null;
-				var cancel = StoppingCts.Token;
-
-				#region ConfigInitialization
-
-				Config = new Config(Path.Combine(DataDir, "Config.json"));
-				await Config.LoadOrCreateDefaultFileAsync();
-				Logger.LogInfo($"{nameof(Config)} is successfully initialized.");
-
-				#endregion ConfigInitialization
-
-				cancel.ThrowIfCancellationRequested();
-
-				BitcoinStore = new BitcoinStore();
-				var bstoreInitTask = BitcoinStore.InitializeAsync(Path.Combine(DataDir, "BitcoinStore"), Network);
-				var addressManagerFolderPath = Path.Combine(DataDir, "AddressManager");
-
-				AddressManagerFilePath = Path.Combine(addressManagerFolderPath, $"AddressManager{Network}.dat");
-				var addrManTask = InitializeAddressManagerBehaviorAsync();
-
-				var blocksFolderPath = Path.Combine(DataDir, $"Blocks{Network}");
-				var connectionParameters = new NodeConnectionParameters { UserAgent = "/Groestlcoin:2.20.1/" };
+				SingleInstanceChecker = new SingleInstanceChecker(Network);
 
 				if (Config.UseTor)
 				{
@@ -198,16 +119,54 @@ namespace WalletWasabi.Gui
 				{
 					Synchronizer = new WasabiSynchronizer(Network, BitcoinStore, Config.GetFallbackBackendUri(), null);
 				}
+			}
+		}
 
-				HostedServices.Register(new UpdateChecker(TimeSpan.FromMinutes(7), Synchronizer.WasabiClient), "Software Update Checker");
+		private bool InitializationCompleted { get; set; } = false;
+
+		private bool InitializationStarted { get; set; } = false;
+
+		private CancellationTokenSource StoppingCts { get; }
+
+		private SingleInstanceChecker SingleInstanceChecker { get; }
+		public CrashReporter CrashReporter { get; }
+
+		public async Task InitializeNoWalletAsync()
+		{
+			InitializationStarted = true;
+			AddressManager = null;
+			TorManager = null;
+			var cancel = StoppingCts.Token;
+
+			try
+			{
+				await SingleInstanceChecker.CheckAsync().ConfigureAwait(false);
+
+				Cache = new MemoryCache(new MemoryCacheOptions
+				{
+					SizeLimit = 1_000,
+					ExpirationScanFrequency = TimeSpan.FromSeconds(30)
+				});
+				var bstoreInitTask = BitcoinStore.InitializeAsync();
+				var addressManagerFolderPath = Path.Combine(DataDir, "AddressManager");
+
+				AddressManagerFilePath = Path.Combine(addressManagerFolderPath, $"AddressManager{Network}.dat");
+				var addrManTask = InitializeAddressManagerBehaviorAsync();
+
+				var blocksFolderPath = Path.Combine(DataDir, $"Blocks{Network}");
+				var userAgent = Constants.UserAgents.RandomElement();
+				var connectionParameters = new NodeConnectionParameters { UserAgent = userAgent };
+
+				HostedServices.Register(new UpdateChecker(TimeSpan.FromMinutes(7), Synchronizer), "Software Update Checker");
 
 				#region ProcessKillSubscription
 
-				AppDomain.CurrentDomain.ProcessExit += async (s, e) => await TryDesperateDequeueAllCoinsAsync();
+				AppDomain.CurrentDomain.ProcessExit += async (s, e) => await DisposeAsync().ConfigureAwait(false);
 				Console.CancelKeyPress += async (s, e) =>
 				{
 					e.Cancel = true;
-					await StopAndExitAsync();
+					Logger.LogWarning("Process was signaled for killing.", nameof(Global));
+					await DisposeAsync().ConfigureAwait(false);
 				};
 
 				#endregion ProcessKillSubscription
@@ -237,7 +196,10 @@ namespace WalletWasabi.Gui
 
 				#region BitcoinStoreInitialization
 
-				await bstoreInitTask;
+				await bstoreInitTask.ConfigureAwait(false);
+
+				// Make sure that the height of the wallets will not be better than the current height of the filters.
+				WalletManager.SetMaxBestHeight(BitcoinStore.IndexStore.SmartHeaderChain.TipHeight);
 
 				#endregion BitcoinStoreInitialization
 
@@ -262,7 +224,10 @@ namespace WalletWasabi.Gui
 									EndPointStrategy.Default(Network, EndPointType.Rpc),
 									txIndex: null,
 									prune: null,
-									userAgent: $"/GroestlMix:{Constants.ClientVersion.ToString()}/"),
+									mempoolReplacement: "fee,optin",
+									userAgent: $"/GroestlMix:{Constants.ClientVersion}/",
+									fallbackFee: null, // ToDo: Maybe we should have it, not only for tests?
+									Cache),
 								cancel)
 							.ConfigureAwait(false);
 					}
@@ -301,7 +266,7 @@ namespace WalletWasabi.Gui
 
 				#region AddressManagerInitialization
 
-				AddressManagerBehavior addressManagerBehavior = await addrManTask;
+				AddressManagerBehavior addressManagerBehavior = await addrManTask.ConfigureAwait(false);
 				connectionParameters.TemplateBehaviors.Add(addressManagerBehavior);
 
 				#endregion AddressManagerInitialization
@@ -332,7 +297,7 @@ namespace WalletWasabi.Gui
 				}
 				else
 				{
-					if (Config.UseTor is true)
+					if (Config.UseTor)
 					{
 						// onlyForOnionHosts: false - Connect to clearnet IPs through Tor, too.
 						connectionParameters.TemplateBehaviors.Add(new SocksSettingsBehavior(Config.TorSocks5EndPoint, onlyForOnionHosts: false, networkCredential: null, streamIsolation: true));
@@ -340,10 +305,10 @@ namespace WalletWasabi.Gui
 						// This of course makes the first setting unnecessary, but it's better if that's around, in case someone wants to tinker here.
 						connectionParameters.EndpointConnector = new DefaultEndpointConnector(allowOnlyTorEndpoints: Network == NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet);
 
-						await AddKnownBitcoinFullNodeAsHiddenServiceAsync(AddressManager);
+						await AddKnownBitcoinFullNodeAsHiddenServiceAsync(AddressManager).ConfigureAwait(false);
 					}
 					Nodes = new NodesGroup(Network, connectionParameters, requirements: Constants.NodeRequirements);
-
+					Nodes.MaximumNodeConnection = 12;
 					RegTestMempoolServingNode = null;
 				}
 
@@ -378,8 +343,8 @@ namespace WalletWasabi.Gui
 
 				cancel.ThrowIfCancellationRequested();
 
-				TransactionBroadcaster = new TransactionBroadcaster(Network, BitcoinStore, Synchronizer, Nodes, BitcoinCoreNode?.RpcClient);
-				CoinJoinProcessor = new CoinJoinProcessor(Synchronizer, BitcoinCoreNode?.RpcClient);
+				TransactionBroadcaster = new TransactionBroadcaster(Network, BitcoinStore, Synchronizer, Nodes, WalletManager, BitcoinCoreNode?.RpcClient);
+				CoinJoinProcessor = new CoinJoinProcessor(Synchronizer, WalletManager, BitcoinCoreNode?.RpcClient);
 
 				#region JsonRpcServerInitialization
 
@@ -387,38 +352,35 @@ namespace WalletWasabi.Gui
 				if (jsonRpcServerConfig.IsEnabled)
 				{
 					RpcServer = new JsonRpcServer(this, jsonRpcServerConfig);
-					await RpcServer.StartAsync(cancel).ConfigureAwait(false);
+					try
+					{
+						await RpcServer.StartAsync(cancel).ConfigureAwait(false);
+					}
+					catch (System.Net.HttpListenerException e)
+					{
+						Logger.LogWarning($"Failed to start {nameof(JsonRpcServer)} with error: {e.Message}.");
+						RpcServer = null;
+					}
 				}
 
 				#endregion JsonRpcServerInitialization
-			}
-			catch (Exception ex)
-			{
-				Logger.LogCritical(ex);
-				InitializationCompleted = true;
-				await DisposeAsync().ConfigureAwait(false);
-				Environment.Exit(1);
+
+				#region Blocks provider
+
+				var blockProvider = new CachedBlockProvider(
+					new SmartBlockProvider(
+						new P2pBlockProvider(Nodes, BitcoinCoreNode, Synchronizer, Config.ServiceConfiguration, Network),
+						Cache),
+					new FileSystemBlockRepository(blocksFolderPath, Network));
+
+				#endregion Blocks provider
+
+				WalletManager.RegisterServices(BitcoinStore, Synchronizer, Nodes, Config.ServiceConfiguration, FeeProviders, blockProvider);
 			}
 			finally
 			{
 				InitializationCompleted = true;
 			}
-		}
-
-		internal async Task StopAndExitAsync()
-		{
-			Logger.LogWarning("Process was signaled for killing.", nameof(Global));
-
-			KillRequested = true;
-			await TryDesperateDequeueAllCoinsAsync();
-			Dispatcher.UIThread.PostLogException(() =>
-			{
-				var window = (Application.Current.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime).MainWindow;
-				window?.Close();
-			});
-			await DisposeAsync();
-
-			Logger.LogSoftwareStopped("Wasabi");
 		}
 
 		private async Task<AddressManagerBehavior> InitializeAddressManagerBehaviorAsync()
@@ -433,7 +395,7 @@ namespace WalletWasabi.Gui
 			{
 				try
 				{
-					AddressManager = await NBitcoinHelpers.LoadAddressManagerFromPeerFileAsync(AddressManagerFilePath);
+					AddressManager = await NBitcoinHelpers.LoadAddressManagerFromPeerFileAsync(AddressManagerFilePath).ConfigureAwait(false);
 
 					// Most of the times we do not need to discover new peers. Instead, we can connect to
 					// some of those that we already discovered in the past. In this case we assume that
@@ -442,8 +404,8 @@ namespace WalletWasabi.Gui
 					// 200 and only one user reported he/she was not able to connect (there could be many others,
 					// of course).
 					// On the other side, increasing this number forces users that do not need to discover more peers
-					// to spend resources (CPU/bandwith) to discover new peers.
-					needsToDiscoverPeers = Config.UseTor is true || AddressManager.Count < 500;
+					// to spend resources (CPU/bandwidth) to discover new peers.
+					needsToDiscoverPeers = Config.UseTor || AddressManager.Count < 500;
 					Logger.LogInfo($"Loaded {nameof(AddressManager)} from `{AddressManagerFilePath}`.");
 				}
 				catch (DirectoryNotFoundException ex)
@@ -496,64 +458,23 @@ namespace WalletWasabi.Gui
 			// Then filtered to include only /Satoshi:0.17.x
 			var fullBaseDirectory = EnvironmentHelpers.GetFullBaseDirectory();
 
-			var onions = await File.ReadAllLinesAsync(Path.Combine(fullBaseDirectory, "OnionSeeds", $"{Network}OnionSeeds.txt"));
+			var onions = await File.ReadAllLinesAsync(Path.Combine(fullBaseDirectory, "Tor", "OnionSeeds", $"{Network}OnionSeeds.txt")).ConfigureAwait(false);
 
 			onions.Shuffle();
 			foreach (var onion in onions.Take(60))
 			{
 				if (EndPointParser.TryParse(onion, Network.DefaultPort, out var endpoint))
 				{
-					await addressManager.AddAsync(endpoint);
+					await addressManager.AddAsync(endpoint).ConfigureAwait(false);
 				}
 			}
 		}
 
-		private CancellationTokenSource _cancelWalletServiceInitialization = null;
-
-		public async Task InitializeWalletServiceAsync(KeyManager keyManager)
-		{
-			using (_cancelWalletServiceInitialization = new CancellationTokenSource())
-			{
-				var token = _cancelWalletServiceInitialization.Token;
-				while (!InitializationCompleted)
-				{
-					await Task.Delay(100, token);
-				}
-
-				if (Config.UseTor)
-				{
-					ChaumianClient = new CoinJoinClient(Synchronizer, Network, keyManager, () => Config.GetCurrentBackendUri(), Config.TorSocks5EndPoint);
-				}
-				else
-				{
-					ChaumianClient = new CoinJoinClient(Synchronizer, Network, keyManager, Config.GetFallbackBackendUri(), null);
-				}
-
-				WalletService = new WalletService(BitcoinStore, keyManager, Synchronizer, ChaumianClient, Nodes, DataDir, Config.ServiceConfiguration, FeeProviders, BitcoinCoreNode);
-
-				ChaumianClient.Start();
-				Logger.LogInfo("Start Chaumian CoinJoin service...");
-
-				Logger.LogInfo($"Starting {nameof(WalletService)}...");
-				await WalletService.InitializeAsync(token);
-				Logger.LogInfo($"{nameof(WalletService)} started.");
-
-				token.ThrowIfCancellationRequested();
-
-				TransactionBroadcaster.AddWalletService(WalletService);
-				CoinJoinProcessor.AddWalletService(WalletService);
-
-				WalletService.TransactionProcessor.WalletRelevantTransactionProcessed += TransactionProcessor_WalletRelevantTransactionProcessed;
-				ChaumianClient.OnDequeue += ChaumianClient_OnDequeued;
-			}
-			_cancelWalletServiceInitialization = null; // Must make it null explicitly, because dispose won't make it null.
-		}
-
-		private void ChaumianClient_OnDequeued(object sender, DequeueResult e)
+		private void WalletManager_OnDequeue(object? sender, DequeueResult e)
 		{
 			try
 			{
-				if (UiConfig?.LurkingWifeMode is true)
+				if (UiConfig.LurkingWifeMode)
 				{
 					return;
 				}
@@ -566,7 +487,7 @@ namespace WalletWasabi.Gui
 						var type = reason == DequeueReason.UserRequested ? NotificationType.Information : NotificationType.Warning;
 						var message = reason == DequeueReason.UserRequested ? "" : reason.ToFriendlyString();
 						var title = success.Value.Count() == 1 ? $"Coin ({success.Value.First().Amount.ToString(false, true)}) Dequeued" : $"{success.Value.Count()} Coins Dequeued";
-						NotificationHelpers.Notify(message, title, type);
+						NotificationHelpers.Notify(message, title, type, sender: sender);
 					}
 				}
 
@@ -576,7 +497,7 @@ namespace WalletWasabi.Gui
 					var type = NotificationType.Warning;
 					var message = reason.ToFriendlyString();
 					var title = failure.Value.Count() == 1 ? $"Couldn't Dequeue Coin ({failure.Value.First().Amount.ToString(false, true)})" : $"Couldn't Dequeue {failure.Value.Count()} Coins";
-					NotificationHelpers.Notify(message, title, type);
+					NotificationHelpers.Notify(message, title, type, sender: sender);
 				}
 			}
 			catch (Exception ex)
@@ -585,13 +506,13 @@ namespace WalletWasabi.Gui
 			}
 		}
 
-		private void TransactionProcessor_WalletRelevantTransactionProcessed(object sender, ProcessedResult e)
+		private void WalletManager_WalletRelevantTransactionProcessed(object? sender, ProcessedResult e)
 		{
 			try
 			{
 				// In lurking wife mode no notification is raised.
 				// If there are no news, then don't bother too.
-				if (UiConfig?.LurkingWifeMode is true || !e.IsNews)
+				if (UiConfig.LurkingWifeMode || !e.IsNews || (sender as Wallet).State != WalletState.Started)
 				{
 					return;
 				}
@@ -616,38 +537,38 @@ namespace WalletWasabi.Gui
 
 					if (e.Transaction.Transaction.IsCoinBase)
 					{
-						NotifyAndLog($"{amountString} GRS", "Mined", NotificationType.Success, e);
+						NotifyAndLog($"{amountString} GRS", "Mined", NotificationType.Success, e, sender);
 					}
 					else if (isSpent && receiveSpentDiff == miningFee)
 					{
-						NotifyAndLog($"Mining Fee: {amountString} GRS", "Self Spend", NotificationType.Information, e);
+						NotifyAndLog($"Mining Fee: {amountString} GRS", "Self Spend", NotificationType.Information, e, sender);
 					}
 					else if (isSpent && receiveSpentDiff.Almost(Money.Zero, Money.Coins(0.01m)) && e.IsLikelyOwnCoinJoin)
 					{
-						NotifyAndLog($"CoinJoin Completed!", "", NotificationType.Success, e);
+						NotifyAndLog($"CoinJoin Completed!", "", NotificationType.Success, e, sender);
 					}
 					else if (incoming > Money.Zero)
 					{
 						if (e.Transaction.IsRBF && e.Transaction.IsReplacement)
 						{
-							NotifyAndLog($"{amountString} GRS", "Received Replacable Replacement Transaction", NotificationType.Information, e);
+							NotifyAndLog($"{amountString} GRS", "Received Replaceable Replacement Transaction", NotificationType.Information, e, sender);
 						}
 						else if (e.Transaction.IsRBF)
 						{
-							NotifyAndLog($"{amountString} GRS", "Received Replacable Transaction", NotificationType.Success, e);
+							NotifyAndLog($"{amountString} GRS", "Received Replaceable Transaction", NotificationType.Success, e, sender);
 						}
 						else if (e.Transaction.IsReplacement)
 						{
-							NotifyAndLog($"{amountString} GRS", "Received Replacement Transaction", NotificationType.Information, e);
+							NotifyAndLog($"{amountString} GRS", "Received Replacement Transaction", NotificationType.Information, e, sender);
 						}
 						else
 						{
-							NotifyAndLog($"{amountString} GRS", "Received", NotificationType.Success, e);
+							NotifyAndLog($"{amountString} GRS", "Received", NotificationType.Success, e, sender);
 						}
 					}
 					else if (incoming < Money.Zero)
 					{
-						NotifyAndLog($"{amountString} GRS", "Sent", NotificationType.Information, e);
+						NotifyAndLog($"{amountString} GRS", "Sent", NotificationType.Information, e, sender);
 					}
 				}
 				else if (isConfirmedReceive || isConfirmedSpent)
@@ -660,19 +581,19 @@ namespace WalletWasabi.Gui
 
 					if (isConfirmedSpent && receiveSpentDiff == miningFee)
 					{
-						NotifyAndLog($"Mining Fee: {amountString} GRS", "Self Spend Confirmed", NotificationType.Information, e);
+						NotifyAndLog($"Mining Fee: {amountString} GRS", "Self Spend Confirmed", NotificationType.Information, e, sender);
 					}
 					else if (isConfirmedSpent && receiveSpentDiff.Almost(Money.Zero, Money.Coins(0.01m)) && e.IsLikelyOwnCoinJoin)
 					{
-						NotifyAndLog($"CoinJoin Confirmed!", "", NotificationType.Information, e);
+						NotifyAndLog($"CoinJoin Confirmed!", "", NotificationType.Information, e, sender);
 					}
 					else if (incoming > Money.Zero)
 					{
-						NotifyAndLog($"{amountString} GRS", "Receive Confirmed", NotificationType.Information, e);
+						NotifyAndLog($"{amountString} GRS", "Receive Confirmed", NotificationType.Information, e, sender);
 					}
 					else if (incoming < Money.Zero)
 					{
-						NotifyAndLog($"{amountString} GRS", "Send Confirmed", NotificationType.Information, e);
+						NotifyAndLog($"{amountString} GRS", "Send Confirmed", NotificationType.Information, e, sender);
 					}
 				}
 			}
@@ -682,117 +603,23 @@ namespace WalletWasabi.Gui
 			}
 		}
 
-		private static void NotifyAndLog(string message, string title, NotificationType notificationType, ProcessedResult e)
+		/// <returns>If initialization is successful, otherwise it was interrupted which means stopping was requested.</returns>
+		public async Task<bool> WaitForInitializationCompletedAsync(CancellationToken cancellationToken)
+		{
+			while (!InitializationCompleted)
+			{
+				await Task.Delay(100, cancellationToken).ConfigureAwait(false);
+			}
+
+			return !StoppingCts.IsCancellationRequested;
+		}
+
+		private static void NotifyAndLog(string message, string title, NotificationType notificationType, ProcessedResult e, object sender)
 		{
 			message = Guard.Correct(message);
 			title = Guard.Correct(title);
-			NotificationHelpers.Notify(message, title, notificationType, async () => await FileHelpers.OpenFileInTextEditorAsync(Logger.FilePath));
+			NotificationHelpers.Notify(message, title, notificationType, async () => await FileHelpers.OpenFileInTextEditorAsync(Logger.FilePath).ConfigureAwait(false), sender);
 			Logger.LogInfo($"Transaction Notification ({notificationType}): {title} - {message} - {e.Transaction.GetHash()}");
-		}
-
-		public string GetWalletFullPath(string walletName)
-		{
-			walletName = walletName.TrimEnd(".json", StringComparison.OrdinalIgnoreCase);
-			return Path.Combine(WalletsDir, walletName + ".json");
-		}
-
-		public string GetWalletBackupFullPath(string walletName)
-		{
-			walletName = walletName.TrimEnd(".json", StringComparison.OrdinalIgnoreCase);
-			return Path.Combine(WalletBackupsDir, walletName + ".json");
-		}
-
-		public KeyManager LoadKeyManager(string walletFullPath, string walletBackupFullPath)
-		{
-			try
-			{
-				return LoadKeyManager(walletFullPath);
-			}
-			catch (Exception ex)
-			{
-				if (!File.Exists(walletBackupFullPath))
-				{
-					throw;
-				}
-
-				Logger.LogWarning($"Wallet got corrupted.\n" +
-					$"Wallet Filepath: {walletFullPath}\n" +
-					$"Trying to recover it from backup.\n" +
-					$"Backup path: {walletBackupFullPath}\n" +
-					$"Exception: {ex}");
-				if (File.Exists(walletFullPath))
-				{
-					string corruptedWalletBackupPath = Path.Combine(WalletBackupsDir, $"{Path.GetFileName(walletFullPath)}_CorruptedBackup");
-					if (File.Exists(corruptedWalletBackupPath))
-					{
-						File.Delete(corruptedWalletBackupPath);
-						Logger.LogInfo($"Deleted previous corrupted wallet file backup from `{corruptedWalletBackupPath}`.");
-					}
-					File.Move(walletFullPath, corruptedWalletBackupPath);
-					Logger.LogInfo($"Backed up corrupted wallet file to `{corruptedWalletBackupPath}`.");
-				}
-				File.Copy(walletBackupFullPath, walletFullPath);
-
-				return LoadKeyManager(walletFullPath);
-			}
-		}
-
-		public KeyManager LoadKeyManager(string walletFullPath)
-		{
-			KeyManager keyManager;
-
-			// Set the LastAccessTime.
-			new FileInfo(walletFullPath)
-			{
-				LastAccessTime = DateTime.Now
-			};
-
-			keyManager = KeyManager.FromFile(walletFullPath);
-			Logger.LogInfo($"Wallet loaded: {Path.GetFileNameWithoutExtension(keyManager.FilePath)}.");
-			return keyManager;
-		}
-
-		public async Task DisposeInWalletDependentServicesAsync()
-		{
-			var walletService = WalletService;
-			if (walletService is { })
-			{
-				WalletService.TransactionProcessor.WalletRelevantTransactionProcessed -= TransactionProcessor_WalletRelevantTransactionProcessed;
-				ChaumianClient.OnDequeue -= ChaumianClient_OnDequeued;
-			}
-
-			try
-			{
-				_cancelWalletServiceInitialization?.Cancel();
-			}
-			catch (ObjectDisposedException)
-			{
-				Logger.LogWarning($"{nameof(_cancelWalletServiceInitialization)} is disposed. This can occur due to an error while processing the wallet.");
-			}
-			_cancelWalletServiceInitialization = null;
-
-			walletService = WalletService;
-			if (walletService is { })
-			{
-				var keyManager = walletService.KeyManager;
-				if (keyManager is { }) // This should never happen.
-				{
-					string backupWalletFilePath = Path.Combine(WalletBackupsDir, Path.GetFileName(keyManager.FilePath));
-					keyManager.ToFile(backupWalletFilePath);
-					Logger.LogInfo($"{nameof(walletService.KeyManager)} backup saved to `{backupWalletFilePath}`.");
-				}
-				walletService.Dispose();
-				WalletService = null;
-				Logger.LogInfo($"{nameof(WalletService)} is stopped.");
-			}
-
-			var chaumianClient = ChaumianClient;
-			if (chaumianClient is { })
-			{
-				await chaumianClient.StopAsync();
-				ChaumianClient = null;
-				Logger.LogInfo($"{nameof(ChaumianClient)} is stopped.");
-			}
 		}
 
 		/// <summary>
@@ -809,7 +636,7 @@ namespace WalletWasabi.Gui
 			{
 				while (Interlocked.Read(ref _dispose) != 2)
 				{
-					await Task.Delay(50);
+					await Task.Delay(50).ConfigureAwait(false);
 				}
 				return;
 			}
@@ -817,6 +644,7 @@ namespace WalletWasabi.Gui
 			{
 				return;
 			}
+			Logger.LogWarning("Process is exiting.", nameof(Global));
 
 			try
 			{
@@ -827,18 +655,40 @@ namespace WalletWasabi.Gui
 					return;
 				}
 
-				while (!InitializationCompleted)
+				try
 				{
-					await Task.Delay(100);
+					using var initCts = new CancellationTokenSource(TimeSpan.FromMinutes(6));
+					await WaitForInitializationCompletedAsync(initCts.Token).ConfigureAwait(false);
+				}
+				catch (Exception ex)
+				{
+					Logger.LogError($"Error during {nameof(WaitForInitializationCompletedAsync)}: {ex}");
 				}
 
-				await DisposeInWalletDependentServicesAsync();
+				try
+				{
+					using var dequeueCts = new CancellationTokenSource(TimeSpan.FromMinutes(6));
+					await WalletManager.RemoveAndStopAllAsync(dequeueCts.Token).ConfigureAwait(false);
+				}
+				catch (Exception ex)
+				{
+					Logger.LogError($"Error during {nameof(WalletManager.RemoveAndStopAllAsync)}: {ex}");
+				}
+
+				Dispatcher.UIThread.PostLogException(() =>
+				{
+					var window = (Application.Current.ApplicationLifetime as IClassicDesktopStyleApplicationLifetime).MainWindow;
+					window?.Close();
+				});
+
+				WalletManager.OnDequeue -= WalletManager_OnDequeue;
+				WalletManager.WalletRelevantTransactionProcessed -= WalletManager_WalletRelevantTransactionProcessed;
 
 				var rpcServer = RpcServer;
 				if (rpcServer is { })
 				{
 					using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(21));
-					await rpcServer.StopAsync(cts.Token);
+					await rpcServer.StopAsync(cts.Token).ConfigureAwait(false);
 					Logger.LogInfo($"{nameof(RpcServer)} is stopped.", nameof(Global));
 				}
 
@@ -859,7 +709,7 @@ namespace WalletWasabi.Gui
 				var synchronizer = Synchronizer;
 				if (synchronizer is { })
 				{
-					await synchronizer.StopAsync();
+					await synchronizer.StopAsync().ConfigureAwait(false);
 					Logger.LogInfo($"{nameof(Synchronizer)} is stopped.");
 				}
 
@@ -890,7 +740,7 @@ namespace WalletWasabi.Gui
 					nodes.Disconnect();
 					while (nodes.ConnectedNodes.Any(x => x.IsConnected))
 					{
-						await Task.Delay(50);
+						await Task.Delay(50).ConfigureAwait(false);
 					}
 					nodes.Dispose();
 					Logger.LogInfo($"{nameof(Nodes)} are disposed.");
@@ -917,15 +767,30 @@ namespace WalletWasabi.Gui
 				var torManager = TorManager;
 				if (torManager is { })
 				{
-					await torManager.StopAsync();
+					await torManager.StopAsync().ConfigureAwait(false);
 					Logger.LogInfo($"{nameof(TorManager)} is stopped.");
+				}
+
+				var cache = Cache;
+				if (cache is { })
+				{
+					cache.Dispose();
+				}
+
+				try
+				{
+					SingleInstanceChecker?.Dispose();
+				}
+				catch (Exception ex)
+				{
+					Logger.LogError($"Error during the disposal of {nameof(SingleInstanceChecker)}: {ex}");
 				}
 
 				if (AsyncMutex.IsAny)
 				{
 					try
 					{
-						await AsyncMutex.WaitForAllMutexToCloseAsync();
+						await AsyncMutex.WaitForAllMutexToCloseAsync().ConfigureAwait(false);
 						Logger.LogInfo($"{nameof(AsyncMutex)}(es) are stopped.");
 					}
 					catch (Exception ex)
@@ -941,42 +806,9 @@ namespace WalletWasabi.Gui
 			finally
 			{
 				StoppingCts?.Dispose();
-				StoppingCts = null;
 				Interlocked.Exchange(ref _dispose, 2);
+				Logger.LogSoftwareStopped("Wasabi");
 			}
-		}
-
-		public string GetNextWalletName()
-		{
-			for (int i = 0; i < int.MaxValue; i++)
-			{
-				if (!File.Exists(Path.Combine(WalletsDir, $"Wallet{i}.json")))
-				{
-					return $"Wallet{i}";
-				}
-			}
-
-			throw new NotSupportedException("This is impossible.");
-		}
-
-		public string GetNextHardwareWalletName(HwiEnumerateEntry hwi = null, string customPrefix = null)
-		{
-			var prefix = customPrefix is null
-				? hwi is null
-					? "HardwareWallet"
-					: hwi.Model.ToString()
-				: customPrefix;
-
-			for (int i = 0; i < int.MaxValue; i++)
-			{
-				var name = $"{prefix}{i}";
-				if (!File.Exists(Path.Combine(WalletsDir, $"{name}.json")))
-				{
-					return name;
-				}
-			}
-
-			throw new NotSupportedException("This is impossible.");
 		}
 	}
 }

@@ -1,25 +1,24 @@
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Text;
+using System.Diagnostics.CodeAnalysis;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using WalletWasabi.Hwi.Models;
 using WalletWasabi.Hwi.Parsers;
-using WalletWasabi.Microservices;
+using WalletWasabi.Hwi.ProcessBridge;
 
 namespace WalletWasabi.Tests.UnitTests.Hwi
 {
-	public class HwiProcessBridgeMock : IProcessBridge
+	public class HwiProcessBridgeMock : IHwiProcessInvoker
 	{
-		public HardwareWalletModels Model { get; }
-
 		public HwiProcessBridgeMock(HardwareWalletModels model)
 		{
 			Model = model;
 		}
 
-		public Task<(string response, int exitCode)> SendCommandAsync(string arguments, bool openConsole, CancellationToken cancel)
+		public HardwareWalletModels Model { get; }
+
+		public Task<(string response, int exitCode)> SendCommandAsync(string arguments, bool openConsole, CancellationToken cancel, Action<StreamWriter>? standardInputWriter = null)
 		{
 			if (openConsole)
 			{
@@ -57,9 +56,9 @@ namespace WalletWasabi.Tests.UnitTests.Hwi
 			string path = HwiParser.NormalizeRawDevicePath(rawPath);
 			string devicePathAndTypeArgumentString = $"--device-path \"{path}\" --device-type \"{model}\"";
 
-			const string successTrueResponse = "{\"success\": true}\r\n";
+			const string SuccessTrueResponse = "{\"success\": true}\r\n";
 
-			string response = null;
+			string? response = null;
 			int code = 0;
 
 			if (CompareArguments(arguments, "enumerate"))
@@ -85,7 +84,7 @@ namespace WalletWasabi.Tests.UnitTests.Hwi
 			{
 				if (Model == HardwareWalletModels.Trezor_T || Model == HardwareWalletModels.Trezor_1)
 				{
-					response = successTrueResponse;
+					response = SuccessTrueResponse;
 				}
 				else if (Model == HardwareWalletModels.Coldcard)
 				{
@@ -115,7 +114,7 @@ namespace WalletWasabi.Tests.UnitTests.Hwi
 			{
 				if (Model == HardwareWalletModels.Trezor_T || Model == HardwareWalletModels.Trezor_1)
 				{
-					response = successTrueResponse;
+					response = SuccessTrueResponse;
 				}
 				else if (Model == HardwareWalletModels.Coldcard)
 				{
@@ -130,7 +129,7 @@ namespace WalletWasabi.Tests.UnitTests.Hwi
 			{
 				if (Model == HardwareWalletModels.Trezor_T || Model == HardwareWalletModels.Trezor_1)
 				{
-					response = successTrueResponse;
+					response = SuccessTrueResponse;
 				}
 				else if (Model == HardwareWalletModels.Coldcard)
 				{
@@ -171,7 +170,7 @@ namespace WalletWasabi.Tests.UnitTests.Hwi
 					response = "{\"error\": \"The Ledger Nano S does not need a PIN sent from the host\", \"code\": -9}\r\n";
 				}
 			}
-			else if (CompareGetXbpubArguments(arguments, out string xpub))
+			else if (CompareGetXbpubArguments(arguments, out string? xpub))
 			{
 				if (Model == HardwareWalletModels.Trezor_T || Model == HardwareWalletModels.Coldcard || Model == HardwareWalletModels.Trezor_1 || Model == HardwareWalletModels.Ledger_Nano_S)
 				{
@@ -240,7 +239,7 @@ namespace WalletWasabi.Tests.UnitTests.Hwi
 		private static bool CompareArguments(string arguments, string desired, bool useStartWith = false)
 			=> CompareArguments(out _, arguments, desired, useStartWith);
 
-		private static bool CompareGetXbpubArguments(string arguments, out string extPubKey)
+		private static bool CompareGetXbpubArguments(string arguments, [NotNullWhen(returnValue: true)] out string? extPubKey)
 		{
 			extPubKey = null;
 			string command = "getxpub";
@@ -260,12 +259,7 @@ namespace WalletWasabi.Tests.UnitTests.Hwi
 				}
 			}
 
-			return extPubKey != null;
-		}
-
-		public Process Start(string arguments, bool openConsole)
-		{
-			throw new NotImplementedException();
+			return extPubKey is { };
 		}
 	}
 }

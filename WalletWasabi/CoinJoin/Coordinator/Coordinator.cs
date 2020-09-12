@@ -8,6 +8,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
+using WalletWasabi.BitcoinCore.Rpc;
 using WalletWasabi.Blockchain.Blocks;
 using WalletWasabi.CoinJoin.Common.Models;
 using WalletWasabi.CoinJoin.Coordinator.Banning;
@@ -22,30 +23,9 @@ namespace WalletWasabi.CoinJoin.Coordinator
 {
 	public class Coordinator : IDisposable
 	{
-		private List<CoordinatorRound> Rounds { get; }
-		private AsyncLock RoundsListLock { get; }
+		private volatile bool _disposedValue = false; // To detect redundant calls
 
-		private List<uint256> CoinJoins { get; }
-		public string CoinJoinsFilePath => Path.Combine(FolderPath, $"CoinJoins{Network}.txt");
-		private AsyncLock CoinJoinsLock { get; }
-
-		private List<uint256> UnconfirmedCoinJoins { get; }
-
-		public event EventHandler<Transaction> CoinJoinBroadcasted;
-
-		public RPCClient RpcClient { get; }
-
-		public CoordinatorRoundConfig RoundConfig { get; private set; }
-
-		public Network Network { get; }
-
-		public BlockNotifier BlockNotifier { get; }
-
-		public string FolderPath { get; }
-
-		public UtxoReferee UtxoReferee { get; }
-
-		public Coordinator(Network network, BlockNotifier blockNotifier, string folderPath, RPCClient rpc, CoordinatorRoundConfig roundConfig)
+		public Coordinator(Network network, BlockNotifier blockNotifier, string folderPath, IRPCClient rpc, CoordinatorRoundConfig roundConfig)
 		{
 			Network = Guard.NotNull(nameof(network), network);
 			BlockNotifier = Guard.NotNull(nameof(blockNotifier), blockNotifier);
@@ -59,6 +39,7 @@ namespace WalletWasabi.CoinJoin.Coordinator
 			CoinJoins = new List<uint256>();
 			UnconfirmedCoinJoins = new List<uint256>();
 			CoinJoinsLock = new AsyncLock();
+			LastSuccessfulCoinJoinTime = DateTimeOffset.UtcNow;
 
 			Directory.CreateDirectory(FolderPath);
 
@@ -152,6 +133,31 @@ namespace WalletWasabi.CoinJoin.Coordinator
 			BlockNotifier.OnBlock += BlockNotifier_OnBlockAsync;
 		}
 
+		public event EventHandler<Transaction> CoinJoinBroadcasted;
+
+		public DateTimeOffset LastSuccessfulCoinJoinTime { get; private set; }
+
+		private List<CoordinatorRound> Rounds { get; }
+		private AsyncLock RoundsListLock { get; }
+
+		private List<uint256> CoinJoins { get; }
+		public string CoinJoinsFilePath => Path.Combine(FolderPath, $"CoinJoins{Network}.txt");
+		private AsyncLock CoinJoinsLock { get; }
+
+		private List<uint256> UnconfirmedCoinJoins { get; }
+
+		public IRPCClient RpcClient { get; }
+
+		public CoordinatorRoundConfig RoundConfig { get; private set; }
+
+		public Network Network { get; }
+
+		public BlockNotifier BlockNotifier { get; }
+
+		public string FolderPath { get; }
+
+		public UtxoReferee UtxoReferee { get; }
+
 		private async void BlockNotifier_OnBlockAsync(object sender, Block block)
 		{
 			try
@@ -193,7 +199,7 @@ namespace WalletWasabi.CoinJoin.Coordinator
 
 				// if coin is not banned
 				var foundElem = await UtxoReferee.TryGetBannedAsync(prevOut, notedToo: true).ConfigureAwait(false);
-				if (foundElem != null)
+				if (foundElem is { })
 				{
 					if (!AnyRunningRoundContainsInput(prevOut, out _))
 					{
@@ -293,11 +299,29 @@ namespace WalletWasabi.CoinJoin.Coordinator
 				// If success save the coinjoin.
 				if (status == CoordinatorRoundStatus.Succeded)
 				{
+					uint256[] mempoolHashes = null;
+					try
+					{
+						mempoolHashes = await RpcClient.GetRawMempoolAsync().ConfigureAwait(false);
+					}
+					catch (Exception ex)
+					{
+						Logger.LogError(ex);
+					}
+
 					using (await CoinJoinsLock.LockAsync().ConfigureAwait(false))
 					{
+						if (mempoolHashes is { })
+						{
+							var fallOuts = UnconfirmedCoinJoins.Where(x => !mempoolHashes.Contains(x));
+							CoinJoins.RemoveAll(x => fallOuts.Contains(x));
+							UnconfirmedCoinJoins.RemoveAll(x => fallOuts.Contains(x));
+						}
+
 						uint256 coinJoinHash = round.CoinJoin.GetHash();
 						CoinJoins.Add(coinJoinHash);
 						UnconfirmedCoinJoins.Add(coinJoinHash);
+						LastSuccessfulCoinJoinTime = DateTimeOffset.UtcNow;
 						await File.AppendAllLinesAsync(CoinJoinsFilePath, new[] { coinJoinHash.ToString() }).ConfigureAwait(false);
 
 						// When a round succeeded, adjust the denomination as to users still be able to register with the latest round's active output amount.
@@ -318,7 +342,7 @@ namespace WalletWasabi.CoinJoin.Coordinator
 								if (newDenominationToGetInWithactiveOutputs > Money.Coins(0.01m))
 								{
 									RoundConfig.Denomination = newDenominationToGetInWithactiveOutputs;
-									await RoundConfig.ToFileAsync().ConfigureAwait(false);
+									RoundConfig.ToFile();
 								}
 							}
 						}
@@ -332,7 +356,7 @@ namespace WalletWasabi.CoinJoin.Coordinator
 
 					CoordinatorRound nextRound = GetCurrentInputRegisterableRoundOrDefault(syncLock: false);
 
-					if (nextRound != null)
+					if (nextRound is { })
 					{
 						int nextRoundAlicesCount = nextRound.CountAlices(syncLock: false);
 						var alicesSignedCount = round.AnonymitySet - alicesDidntSign.Count();
@@ -340,6 +364,7 @@ namespace WalletWasabi.CoinJoin.Coordinator
 						// New round's anonset should be the number of alices that signed in this round.
 						// Except if the number of alices in the next round is already larger.
 						var newAnonymitySet = Math.Max(alicesSignedCount, nextRoundAlicesCount);
+
 						// But it cannot be larger than the current anonset of that round.
 						newAnonymitySet = Math.Min(newAnonymitySet, nextRound.AnonymitySet);
 
@@ -460,8 +485,6 @@ namespace WalletWasabi.CoinJoin.Coordinator
 
 		#region IDisposable Support
 
-		private volatile bool _disposedValue = false; // To detect redundant calls
-
 		protected virtual void Dispose(bool disposing)
 		{
 			if (!_disposedValue)
@@ -470,7 +493,7 @@ namespace WalletWasabi.CoinJoin.Coordinator
 				{
 					using (RoundsListLock.Lock())
 					{
-						if (BlockNotifier != null)
+						if (BlockNotifier is { })
 						{
 							BlockNotifier.OnBlock -= BlockNotifier_OnBlockAsync;
 						}
@@ -504,7 +527,7 @@ namespace WalletWasabi.CoinJoin.Coordinator
 		{
 			// Do not change this code. Put cleanup code in Dispose(bool disposing) above.
 			Dispose(true);
-			// GC.SuppressFinalize(this);
+			//// GC.SuppressFinalize(this);
 		}
 
 		#endregion IDisposable Support

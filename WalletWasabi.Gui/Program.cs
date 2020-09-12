@@ -1,6 +1,8 @@
 using Avalonia;
 using Avalonia.Dialogs;
+using Avalonia.ReactiveUI;
 using Avalonia.Threading;
+using AvalonStudio.Extensibility;
 using AvalonStudio.Shell;
 using AvalonStudio.Shell.Extensibility.Platforms;
 using Splat;
@@ -9,8 +11,11 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using WalletWasabi.Gui.CommandLine;
+using WalletWasabi.Gui.CrashReport;
 using WalletWasabi.Gui.ViewModels;
+using WalletWasabi.Helpers;
 using WalletWasabi.Logging;
+using WalletWasabi.Wallets;
 
 namespace WalletWasabi.Gui
 {
@@ -25,7 +30,7 @@ namespace WalletWasabi.Gui
 			bool runGui = false;
 			try
 			{
-				Global = new Global();
+				Global = CreateGlobal();
 
 				Locator.CurrentMutable.RegisterConstant(Global);
 
@@ -33,56 +38,118 @@ namespace WalletWasabi.Gui
 				AppDomain.CurrentDomain.UnhandledException += CurrentDomain_UnhandledException;
 				TaskScheduler.UnobservedTaskException += TaskScheduler_UnobservedTaskException;
 
-				runGui = CommandInterpreter.ExecuteCommandsAsync(Global, args).GetAwaiter().GetResult();
+				runGui = ShouldRunGui(args);
 
-				if (!runGui)
+				if (Global.CrashReporter.IsReport)
 				{
+					StartCrashReporter(args);
 					return;
 				}
 
-				if (Global.InitializeUiConfigAsync().GetAwaiter().GetResult())
+				if (runGui)
 				{
-					Logger.LogInfo($"{nameof(Global.UiConfig)} is successfully initialized.");
-				}
-				else
-				{
-					Logger.LogError($"Failed to initialize {nameof(Global.UiConfig)}.");
-					return;
-				}
+					Logger.LogSoftwareStarted("GroestlMix GUI");
 
-				Logger.LogSoftwareStarted("GroestlMix GUI");
-
-				BuildAvaloniaApp().StartShellApp("GroestlMix Wallet", AppMainAsync, args);
+					BuildAvaloniaApp().StartShellApp("GroestlMix Wallet", AppMainAsync, args);
+				}
 			}
 			catch (Exception ex)
 			{
 				Logger.LogCritical(ex);
+				Global.CrashReporter.SetException(ex);
 				throw;
 			}
 			finally
 			{
-				MainWindowViewModel.Instance?.Dispose();
-				Global.DisposeAsync().GetAwaiter().GetResult();
-				AppDomain.CurrentDomain.UnhandledException -= CurrentDomain_UnhandledException;
-				TaskScheduler.UnobservedTaskException -= TaskScheduler_UnobservedTaskException;
-
-				if (runGui)
-				{
-					Logger.LogSoftwareStopped("GroestlMix GUI");
-				}
+				DisposeAsync().GetAwaiter().GetResult();
 			}
 		}
 
+		private static Global CreateGlobal()
+		{
+			string dataDir = EnvironmentHelpers.GetDataDir(Path.Combine("GroestlMix", "Client"));
+			Directory.CreateDirectory(dataDir);
+			string torLogsFile = Path.Combine(dataDir, "TorLogs.txt");
+
+			var uiConfig = new UiConfig(Path.Combine(dataDir, "UiConfig.json"));
+			uiConfig.LoadOrCreateDefaultFile();
+			var config = new Config(Path.Combine(dataDir, "Config.json"));
+			config.LoadOrCreateDefaultFile();
+			config.CorrectMixUntilAnonymitySet();
+			var walletManager = new WalletManager(config.Network, new WalletDirectories(dataDir));
+
+			return new Global(dataDir, torLogsFile, config, uiConfig, walletManager);
+		}
+
+		private static bool ShouldRunGui(string[] args)
+		{
+			var daemon = new Daemon(Global);
+			var interpreter = new CommandInterpreter(Console.Out, Console.Error);
+			var executionTask = interpreter.ExecuteCommandsAsync(
+				args,
+				new MixerCommand(daemon),
+				new PasswordFinderCommand(Global.WalletManager),
+				new CrashReportCommand(Global.CrashReporter));
+			return executionTask.GetAwaiter().GetResult();
+		}
+
+		private static void SetTheme() => AvalonStudio.Extensibility.Theme.ColorTheme.LoadTheme(AvalonStudio.Extensibility.Theme.ColorTheme.VisualStudioDark);
+
 		private static async void AppMainAsync(string[] args)
 		{
-			AvalonStudio.Extensibility.Theme.ColorTheme.LoadTheme(AvalonStudio.Extensibility.Theme.ColorTheme.VisualStudioDark);
-			MainWindowViewModel.Instance = new MainWindowViewModel();
+			try
+			{
+				SetTheme();
+				var statusBarViewModel = new StatusBarViewModel(Global.DataDir, Global.Network, Global.Config, Global.HostedServices, Global.BitcoinStore.SmartHeaderChain, Global.Synchronizer, Global.LegalDocuments);
+				MainWindowViewModel.Instance = new MainWindowViewModel(Global.Network, Global.UiConfig, Global.WalletManager, statusBarViewModel, IoC.Get<IShell>());
 
-			await Global.InitializeNoWalletAsync();
+				await Global.InitializeNoWalletAsync();
 
-			MainWindowViewModel.Instance.Initialize();
+				MainWindowViewModel.Instance.Initialize(Global.Nodes.ConnectedNodes);
 
-			Dispatcher.UIThread.Post(GC.Collect);
+				Dispatcher.UIThread.Post(GC.Collect);
+			}
+			catch (Exception ex)
+			{
+				if (!(ex is OperationCanceledException))
+				{
+					Logger.LogCritical(ex);
+					Global.CrashReporter.SetException(ex);
+				}
+
+				await DisposeAsync();
+
+				// There is no other way to stop the creation of the WasabiWindow.
+				Environment.Exit(1);
+			}
+		}
+
+		private static async Task DisposeAsync()
+		{
+			var disposeGui = MainWindowViewModel.Instance is { };
+			if (disposeGui)
+			{
+				MainWindowViewModel.Instance.Dispose();
+			}
+
+			if (Global?.CrashReporter?.IsInvokeRequired is true)
+			{
+				// Trigger the CrashReport process.
+				Global.CrashReporter.TryInvokeCrashReport();
+			}
+
+			if (Global is { } global)
+			{
+				await global.DisposeAsync().ConfigureAwait(false);
+			}
+
+			AppDomain.CurrentDomain.UnhandledException -= CurrentDomain_UnhandledException;
+			TaskScheduler.UnobservedTaskException -= TaskScheduler_UnobservedTaskException;
+
+			if (disposeGui)
+			{
+				Logger.LogSoftwareStopped("GroestlMix GUI");
+			}
 		}
 
 		private static void TaskScheduler_UnobservedTaskException(object sender, UnobservedTaskExceptionEventArgs e)
@@ -93,6 +160,30 @@ namespace WalletWasabi.Gui
 		private static void CurrentDomain_UnhandledException(object sender, UnhandledExceptionEventArgs e)
 		{
 			Logger.LogWarning(e?.ExceptionObject as Exception);
+		}
+
+		private static void StartCrashReporter(string[] args)
+		{
+			var result = AppBuilder.Configure<CrashReportApp>().UseReactiveUI();
+
+			if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+			{
+				result
+					.UseWin32()
+					.UseSkia();
+			}
+			else
+			{
+				result.UsePlatformDetect();
+			}
+
+			result
+				.With(new Win32PlatformOptions { AllowEglInitialization = false, UseDeferredRendering = true })
+				.With(new X11PlatformOptions { UseGpu = false, WmClass = "GroestlMix Wallet Crash Reporting" })
+				.With(new AvaloniaNativePlatformOptions { UseDeferredRendering = true, UseGpu = false })
+				.With(new MacOSPlatformOptions { ShowInDock = true });
+
+			result.StartShellApp("GroestlMix Wallet", _ => SetTheme(), args);
 		}
 
 		private static AppBuilder BuildAvaloniaApp()

@@ -5,34 +5,34 @@ using System.Linq;
 using WalletWasabi.Blockchain.Blocks;
 using WalletWasabi.Blockchain.TransactionOutputs;
 using WalletWasabi.Models;
-using WalletWasabi.Services;
+using WalletWasabi.Wallets;
 
 namespace WalletWasabi.Blockchain.Transactions
 {
 	public class TransactionHistoryBuilder
 	{
-		public WalletService WalletService { get; }
-
-		public TransactionHistoryBuilder(WalletService walletService)
+		public TransactionHistoryBuilder(Wallet wallet)
 		{
-			WalletService = walletService;
+			Wallet = wallet;
 		}
+
+		public Wallet Wallet { get; }
 
 		public List<TransactionSummary> BuildHistorySummary()
 		{
-			var walletService = WalletService;
+			var wallet = Wallet;
 
 			var txRecordList = new List<TransactionSummary>();
-			if (walletService is null)
+			if (wallet is null)
 			{
 				return txRecordList;
 			}
 
-			var allCoins = ((CoinsRegistry)walletService.Coins).AsAllCoinsView();
+			var allCoins = ((CoinsRegistry)wallet.Coins).AsAllCoinsView();
 			foreach (SmartCoin coin in allCoins)
 			{
 				var txId = coin.TransactionId;
-				if (txId is null || !walletService.BitcoinStore.TransactionStore.TryGetTransaction(txId, out SmartTransaction foundTransaction))
+				if (txId is null || !wallet.BitcoinStore.TransactionStore.TryGetTransaction(txId, out SmartTransaction foundTransaction))
 				{
 					continue;
 				}
@@ -40,7 +40,7 @@ namespace WalletWasabi.Blockchain.Transactions
 				DateTimeOffset dateTime;
 				if (foundTransaction.Height.Type == HeightType.Chain)
 				{
-					if (walletService.BitcoinStore.SmartHeaderChain.TryGetHeader((uint)foundTransaction.Height.Value, out SmartHeader header))
+					if (wallet.BitcoinStore.SmartHeaderChain.TryGetHeader((uint)foundTransaction.Height.Value, out SmartHeader header))
 					{
 						dateTime = header.BlockTime;
 					}
@@ -55,7 +55,7 @@ namespace WalletWasabi.Blockchain.Transactions
 				}
 
 				var found = txRecordList.FirstOrDefault(x => x.TransactionId == coin.TransactionId);
-				if (found != null) // if found then update
+				if (found is { }) // if found then update
 				{
 					var label = !string.IsNullOrEmpty(found.Label) ? found.Label + ", " : "";
 					found.DateTime = dateTime;
@@ -71,20 +71,21 @@ namespace WalletWasabi.Blockchain.Transactions
 						Amount = coin.Amount,
 						Label = coin.Label,
 						TransactionId = coin.TransactionId,
-						BlockIndex = foundTransaction.BlockIndex
+						BlockIndex = foundTransaction.BlockIndex,
+						IsLikelyCoinJoinOutput = coin.IsLikelyCoinJoinOutput is true
 					});
 				}
 
 				if (!coin.Unspent)
 				{
-					if (!walletService.BitcoinStore.TransactionStore.TryGetTransaction(coin.SpenderTransactionId, out SmartTransaction foundSpenderTransaction))
+					if (!wallet.BitcoinStore.TransactionStore.TryGetTransaction(coin.SpenderTransactionId, out SmartTransaction foundSpenderTransaction))
 					{
 						throw new InvalidOperationException($"Transaction {coin.SpenderTransactionId} not found.");
 					}
 
 					if (foundSpenderTransaction.Height.Type == HeightType.Chain)
 					{
-						if (walletService.BitcoinStore.SmartHeaderChain.TryGetHeader((uint)foundSpenderTransaction.Height.Value, out SmartHeader header))
+						if (wallet.BitcoinStore.SmartHeaderChain.TryGetHeader((uint)foundSpenderTransaction.Height.Value, out SmartHeader header))
 						{
 							dateTime = header.BlockTime;
 						}
@@ -99,7 +100,7 @@ namespace WalletWasabi.Blockchain.Transactions
 					}
 
 					var foundSpenderCoin = txRecordList.FirstOrDefault(x => x.TransactionId == coin.SpenderTransactionId);
-					if (foundSpenderCoin != null) // if found
+					if (foundSpenderCoin is { }) // if found
 					{
 						foundSpenderCoin.DateTime = dateTime;
 						foundSpenderCoin.Amount -= coin.Amount;
@@ -113,7 +114,8 @@ namespace WalletWasabi.Blockchain.Transactions
 							Amount = Money.Zero - coin.Amount,
 							Label = "",
 							TransactionId = coin.SpenderTransactionId,
-							BlockIndex = foundSpenderTransaction.BlockIndex
+							BlockIndex = foundSpenderTransaction.BlockIndex,
+							IsLikelyCoinJoinOutput = coin.IsLikelyCoinJoinOutput is true
 						});
 					}
 				}

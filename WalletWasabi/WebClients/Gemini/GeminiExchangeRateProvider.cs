@@ -4,22 +4,19 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using WalletWasabi.Backend.Models;
 using WalletWasabi.Interfaces;
+using WalletWasabi.Tor.Http.Extensions;
 
 namespace WalletWasabi.WebClients.Gemini
 {
 	public class GeminiExchangeRateProvider : IExchangeRateProvider
 	{
-		private class GeminiExchangeRateInfo
-		{
-			public decimal Bid { get; set; }
-		}
-
-		public async Task<List<ExchangeRate>> GetExchangeRateAsync()
+		public async Task<IEnumerable<ExchangeRate>> GetExchangeRateAsync()
 		{
 			using var httpClient = new HttpClient();
 			httpClient.BaseAddress = new Uri("https://api.gemini.com");
-			var response = await httpClient.GetAsync("/v1/pubticker/grsusd");
-			var data = await response.Content.ReadAsJsonAsync<GeminiExchangeRateInfo>();
+			using var response = await httpClient.GetAsync("/v1/pubticker/grsusd");
+			using var content = response.Content;
+			var data = await content.ReadAsJsonAsync<GeminiExchangeRateInfo>();
 
 			var exchangeRates = new List<ExchangeRate>
 				{
@@ -27,6 +24,11 @@ namespace WalletWasabi.WebClients.Gemini
 				};
 
 			return exchangeRates;
+		}
+
+		private class GeminiExchangeRateInfo
+		{
+			public decimal Bid { get; set; }
 		}
 	}
 }

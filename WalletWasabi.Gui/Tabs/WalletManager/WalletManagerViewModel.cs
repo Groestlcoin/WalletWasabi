@@ -1,50 +1,31 @@
-using Avalonia.Threading;
 using ReactiveUI;
+using Splat;
 using System;
-using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Composition;
 using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Reactive.Disposables;
+using System.Reactive.Linq;
+using WalletWasabi.Blockchain.Keys;
+using WalletWasabi.Gui.Tabs.WalletManager.GenerateWallets;
+using WalletWasabi.Gui.Tabs.WalletManager.HardwareWallets;
+using WalletWasabi.Gui.Tabs.WalletManager.LoadWallets;
+using WalletWasabi.Gui.Tabs.WalletManager.RecoverWallets;
 using WalletWasabi.Gui.ViewModels;
-using WalletWasabi.Hwi.Models;
-using WalletWasabi.Logging;
+using WalletWasabi.Wallets;
 
 namespace WalletWasabi.Gui.Tabs.WalletManager
 {
 	[Export]
 	[Shared]
-	internal class WalletManagerViewModel : WasabiDocumentTabViewModel
+	public class WalletManagerViewModel : WasabiDocumentTabViewModel
 	{
 		private ObservableCollection<CategoryViewModel> _categories;
 		private CategoryViewModel _selectedCategory;
 		private ViewModelBase _currentView;
-		private LoadWalletViewModel LoadWalletViewModelDesktop { get; }
-		private LoadWalletViewModel LoadWalletViewModelHardware { get; }
 
 		public WalletManagerViewModel() : base("Wallet Manager")
 		{
-			LoadWalletViewModelDesktop = new LoadWalletViewModel(this, LoadWalletType.Desktop);
-			LoadWalletViewModelHardware = new LoadWalletViewModel(this, LoadWalletType.Hardware);
-
-			Categories = new ObservableCollection<CategoryViewModel>
-			{
-				new GenerateWalletViewModel(this),
-				new RecoverWalletViewModel(this),
-				LoadWalletViewModelDesktop,
-				new LoadWalletViewModel(this, LoadWalletType.Password),
-				LoadWalletViewModelHardware
-			};
-
-			SelectedCategory = Categories.FirstOrDefault();
-
-			this.WhenAnyValue(x => x.SelectedCategory).Subscribe(category =>
-				{
-					category?.OnCategorySelected();
-
-					CurrentView = category;
-				});
 		}
 
 		public ObservableCollection<CategoryViewModel> Categories
@@ -59,6 +40,15 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 			set => this.RaiseAndSetIfChanged(ref _selectedCategory, value);
 		}
 
+		public ViewModelBase CurrentView
+		{
+			get => _currentView;
+			set => this.RaiseAndSetIfChanged(ref _currentView, value);
+		}
+
+		private LoadWalletViewModel LoadWalletDesktop { get; set; }
+		public LoadWalletViewModel LoadWalletPassword { get; private set; }
+
 		public void SelectGenerateWallet()
 		{
 			SelectedCategory = Categories.First(x => x is GenerateWalletViewModel);
@@ -69,25 +59,74 @@ namespace WalletWasabi.Gui.Tabs.WalletManager
 			SelectedCategory = Categories.First(x => x is RecoverWalletViewModel);
 		}
 
-		public void SelectLoadWallet()
+		public void SelectLoadWallet(KeyManager keymanager = null)
 		{
-			SelectedCategory = Categories.First(x => x is LoadWalletViewModel model && model.LoadWalletType == LoadWalletType.Desktop);
+			SelectedCategory = LoadWalletDesktop;
+			LoadWalletDesktop.SelectWallet(keymanager);
 		}
 
-		public void SelectTestPassword()
+		public void SelectTestPassword(string walletname)
 		{
-			SelectedCategory = Categories.First(x => x is LoadWalletViewModel model && model.LoadWalletType == LoadWalletType.Password);
+			SelectedCategory = LoadWalletPassword;
+			LoadWalletPassword.SelectWallet(walletname);
 		}
 
-		public void SelectHardwareWallet()
+		public override void OnOpen(CompositeDisposable disposables)
 		{
-			SelectedCategory = Categories.First(x => x is LoadWalletViewModel model && model.LoadWalletType == LoadWalletType.Hardware);
+			base.OnOpen(disposables);
+
+			LoadWalletDesktop = new LoadWalletViewModel(this, LoadWalletType.Desktop);
+			LoadWalletPassword = new LoadWalletViewModel(this, LoadWalletType.Password);
+
+			Categories = new ObservableCollection<CategoryViewModel>
+			{
+				new GenerateWalletViewModel(this),
+				new RecoverWalletViewModel(this),
+				LoadWalletDesktop,
+				LoadWalletPassword,
+				new ConnectHardwareWalletViewModel(this)
+			};
+
+			SelectedCategory = Categories.FirstOrDefault();
+
+			this.WhenAnyValue(x => x.SelectedCategory)
+				.Subscribe(category =>
+				{
+					category?.OnCategorySelected();
+					CurrentView = category;
+				});
+
+			var global = Locator.Current.GetService<Global>();
+			var walletManager = global.WalletManager;
+
+			if (!walletManager.GetWallets().Any(wallet => wallet.State == WalletState.Started))
+			{
+				// If there aren't any opened wallet then close this walletmanager if the first wallet loaded.
+				Observable
+					.FromEventPattern<WalletState>(walletManager, nameof(walletManager.WalletStateChanged))
+					.Select(x => x.EventArgs)
+					.Where(x => x == WalletState.Started)
+					.Take(1)
+					.ObserveOn(RxApp.MainThreadScheduler)
+					.Subscribe(wallet =>
+					{
+						// Only close this tab if the user still looking at the load tab.
+						if (CurrentView == LoadWalletDesktop)
+						{
+							OnClose();
+						}
+					}).DisposeWith(disposables);
+			}
 		}
 
-		public ViewModelBase CurrentView
+		public override bool OnClose()
 		{
-			get => _currentView;
-			set => this.RaiseAndSetIfChanged(ref _currentView, value);
+			foreach (var tab in Categories.OfType<IDisposable>())
+			{
+				tab.Dispose();
+			}
+
+			return base.OnClose();
 		}
 	}
 }

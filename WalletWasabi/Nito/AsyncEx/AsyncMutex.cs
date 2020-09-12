@@ -11,57 +11,9 @@ namespace Nito.AsyncEx
 {
 	public class AsyncMutex
 	{
-		/// <summary>
-		/// I did this because enum cannot be Interlocked easily.
-		/// </summary>
-		public enum AsyncLockStatus
-		{
-			StatusUninitialized = 0,
-			StatusReady = 1,
-			StatusAcquiring = 2,
-			StatusAcquired = 3,
-			StatusReleasing = 4
-		}
-
 		private int _status;
 
-		public bool IsQuitPending { get; set; }
-
-		/// <summary>
-		/// Short name of the mutex. This string added to the end of the mutex name.
-		/// </summary>
-		private string ShortName { get; set; }
-
-		/// <summary>
-		/// The full name of the named mutex. Global\ included in the string.
-		/// </summary>
-		private string FullName { get; set; }
-
-		/// <summary>
-		/// Mutex for interprocess synchronization.
-		/// </summary>
-		private Mutex Mutex { get; set; }
-
-		/// <summary>
-		/// AsyncLock for local thread synchronization.
-		/// </summary>
-		private AsyncLock AsyncLock { get; set; }
-
-		/// <summary>
-		/// Separate thread for the mutex where it is created and released.
-		/// </summary>
-		private Thread MutexThread { get; set; }
-
-		private bool IsAlive => MutexThread?.IsAlive is true;
-
-		/// <summary>
-		/// Static storage for local mutexes. It can be used to get an already existing AsyncLock by name of the mutex.
-		/// </summary>
-		private static Dictionary<string, AsyncMutex> AsyncMutexes { get; } = new Dictionary<string, AsyncMutex>();
-
-		private static object AsyncMutexesLock { get; } = new object();
-
-		public static bool IsAny => AsyncMutexes.Any();
+		private int _command;
 
 		public AsyncMutex(string name)
 		{
@@ -98,7 +50,56 @@ namespace Nito.AsyncEx
 			ChangeStatus(AsyncLockStatus.StatusReady, AsyncLockStatus.StatusUninitialized);
 		}
 
-		private int _command;
+		/// <summary>
+		/// I did this because enum cannot be Interlocked easily.
+		/// </summary>
+		public enum AsyncLockStatus
+		{
+			StatusUninitialized = 0,
+			StatusReady = 1,
+			StatusAcquiring = 2,
+			StatusAcquired = 3,
+			StatusReleasing = 4
+		}
+
+		/// <summary>
+		/// Gets the static storage for local mutexes. It can be used to get an already existing AsyncLock by name of the mutex.
+		/// </summary>
+		private static Dictionary<string, AsyncMutex> AsyncMutexes { get; } = new Dictionary<string, AsyncMutex>();
+
+		private static object AsyncMutexesLock { get; } = new object();
+
+		public static bool IsAny => AsyncMutexes.Any();
+
+		public bool IsQuitPending { get; set; }
+
+		/// <summary>
+		/// Gets or sets the short name of the mutex. This string added to the end of the mutex name.
+		/// </summary>
+		private string ShortName { get; set; }
+
+		/// <summary>
+		/// Gets or sets the full name of the named mutex. Global\ included in the string.
+		/// </summary>
+		private string FullName { get; set; }
+
+		/// <summary>
+		/// Gets or sets the Mutex for interprocess synchronization.
+		/// </summary>
+		private Mutex Mutex { get; set; }
+
+		/// <summary>
+		/// Gets or sets the AsyncLock for local thread synchronization.
+		/// </summary>
+		private AsyncLock AsyncLock { get; set; }
+
+		/// <summary>
+		/// Gets or sets a separate thread for the mutex where it is created and released.
+		/// </summary>
+		private Thread MutexThread { get; set; }
+
+		private bool IsAlive => MutexThread?.IsAlive is true;
+
 		private ManualResetEvent ToDo { get; } = new ManualResetEvent(false);
 		private ManualResetEvent Done { get; } = new ManualResetEvent(false);
 
@@ -150,6 +151,7 @@ namespace Nito.AsyncEx
 								{
 									throw new TimeoutException("Could not acquire mutex in time.");
 								}
+
 								// Block for n ms and try to acquire the mutex. Blocking is not a problem
 								// we are on our own thread.
 								acquired = Mutex.WaitOne(1000);
@@ -173,6 +175,7 @@ namespace Nito.AsyncEx
 								// Go to finally.
 								continue;
 							}
+
 							// Let it go and throw the exception...
 						}
 					}
@@ -195,6 +198,7 @@ namespace Nito.AsyncEx
 					{
 						LatestHoldLockException = ex;
 					}
+
 					// Terminate the Thread.
 					return;
 				}
@@ -223,15 +227,17 @@ namespace Nito.AsyncEx
 			}
 			Done.Reset(); // Reset the Done.
 			ToDo.Set(); // Indicate that there is a new command.
+			bool firstRound = true;
 			while (!Done.WaitOne(1))
 			{
 				// Waiting for Done asynchronously.
-				await Task.Delay(pollInterval, cancellationToken).ConfigureAwait(false);
+				await Task.Delay(pollInterval, firstRound ? CancellationToken.None : cancellationToken).ConfigureAwait(false);
+				firstRound = false;
 			}
 			lock (LatestHoldLockExceptionLock)
 			{
 				// If we had an exception then throw it.
-				if (LatestHoldLockException != null)
+				if (LatestHoldLockException is { })
 				{
 					throw LatestHoldLockException;
 				}
@@ -255,7 +261,7 @@ namespace Nito.AsyncEx
 
 			if (!expectedPreviousStatuses.Contains((AsyncLockStatus)prevstatus))
 			{
-				throw new InvalidOperationException($"Previous {nameof(AsyncLock)} state was unexpected: prev:{((AsyncLockStatus)prevstatus).ToString()} now:{((AsyncLockStatus)_status).ToString()}.");
+				throw new InvalidOperationException($"Previous {nameof(AsyncLock)} state was unexpected: prev:{(AsyncLockStatus)prevstatus} now:{(AsyncLockStatus)_status}.");
 			}
 		}
 
@@ -313,9 +319,10 @@ namespace Nito.AsyncEx
 
 				return new Key(this);
 			}
-			catch (TaskCanceledException)
+			catch (TaskCanceledException ex)
 			{
 				// Let it go.
+				Logger.LogTrace(ex);
 			}
 			catch (AbandonedMutexException)
 			{
@@ -328,6 +335,7 @@ namespace Nito.AsyncEx
 			{
 				Logger.LogError($"{ex.ToTypeMessageString()} in {ShortName}.");
 				inner = ex;
+
 				// Let it go.
 			}
 
@@ -380,6 +388,7 @@ namespace Nito.AsyncEx
 			StopThread();
 
 			ChangeStatus(AsyncLockStatus.StatusReady, AsyncLockStatus.StatusReleasing);
+
 			// Release the local lock.
 			AsyncLock?.ReleaseLock();
 		}
@@ -435,7 +444,7 @@ namespace Nito.AsyncEx
 		/// </summary>
 		private sealed class Key : IDisposable
 		{
-			private AsyncMutex AsyncMutex { get; set; }
+			private volatile bool _disposedValue = false; // To detect redundant calls
 
 			/// <summary>
 			/// Creates the key for a mutex.
@@ -446,9 +455,9 @@ namespace Nito.AsyncEx
 				AsyncMutex = asyncMutex;
 			}
 
-			#region IDisposable Support
+			private AsyncMutex AsyncMutex { get; set; }
 
-			private volatile bool _disposedValue = false; // To detect redundant calls
+			#region IDisposable Support
 
 			private void Dispose(bool disposing)
 			{

@@ -5,10 +5,74 @@ namespace Gma.QrCodeNet.Encoding.DataEncodation
 {
 	public sealed class ECISet
 	{
+		/// <summary>
+		/// ISO/IEC 18004:2006 Chapter 6.4.2 Mode indicator = 0111 Page 23
+		/// </summary>
+		private const int ECIMode = 7;
+
+		private const int ECIIndicatorNumBits = 4;
+
 		private Dictionary<string, int> _nameToValue;
 		private Dictionary<int, string> _valueToName;
 
-		public enum AppendOption { NameToValue, ValueToName, Both }
+		/// <summary>
+		/// Initialize ECI Set.
+		/// </summary>
+		/// <param name="option">AppendOption is enum under ECISet
+		/// Use NameToValue during Encode. ValueToName during Decode</param>
+		internal ECISet(AppendOption option)
+		{
+			Initialize(option);
+		}
+
+		public enum AppendOption
+		{
+			NameToValue,
+			ValueToName,
+			Both
+		}
+
+		/// <summary>
+		/// Length indicator for number of ECI codewords
+		/// </summary>
+		/// <remarks>ISO/IEC 18004:2006 Chapter 6.4.2 Page 24.
+		/// 1 codeword length = 0. Any additional codeword add 1 to front. Eg: 3 = 110</remarks>
+		/// <description>Bits required for each one is:
+		/// one = 1, two = 2, three = 3</description>
+		private enum ECICodewordsLength
+		{
+			One = 0,
+			Two = 2,
+			Three = 6
+		}
+
+		/// <remarks>ISO/IEC 18004:2006E ECI Designator Page 24</remarks>
+		/// <param name="eCIValue">Range: 0 ~ 999999</param>
+		/// <returns>Number of Codewords(Byte) for ECI Assignment Value</returns>
+		private static int NumOfCodewords(int eCIValue)
+		{
+			if (eCIValue >= 0 && eCIValue <= 127)
+			{
+				return 1;
+			}
+			else if (eCIValue > 127 && eCIValue <= 16383)
+			{
+				return 2;
+			}
+			else if (eCIValue > 16383 && eCIValue <= 999999)
+			{
+				return 3;
+			}
+			else
+			{
+				throw new ArgumentOutOfRangeException($"{nameof(eCIValue)} should be in range: 0 to 999999.");
+			}
+		}
+
+		/// <remarks>ISO/IEC 18004:2006E ECI Designator Page 24</remarks>
+		/// <param name="eCIValue">Range: 0 ~ 999999</param>
+		/// <returns>Number of bits for ECI Assignment Value</returns>
+		private static int NumOfAssignmentBits(int eCIValue) => NumOfCodewords(eCIValue) * 8;
 
 		private void AppendECI(string name, int value, AppendOption option)
 		{
@@ -30,16 +94,6 @@ namespace Gma.QrCodeNet.Encoding.DataEncodation
 				default:
 					throw new InvalidOperationException($"There is no such {nameof(AppendOption)}.");
 			}
-		}
-
-		/// <summary>
-		/// Initialize ECI Set.
-		/// </summary>
-		/// <param name="option">AppendOption is enum under ECISet
-		/// Use NameToValue during Encode. ValueToName during Decode</param>
-		internal ECISet(AppendOption option)
-		{
-			Initialize(option);
 		}
 
 		private void Initialize(AppendOption option)
@@ -68,6 +122,7 @@ namespace Gma.QrCodeNet.Encoding.DataEncodation
 			// ToDo. Fill up remaining missing table.
 			AppendECI("iso-8859-1", 1, option);
 			AppendECI("IBM437", 2, option);
+
 			// AppendECI("iso-8859-1", 3, option);	//ECI value 1 is default encoding.
 			AppendECI("iso-8859-2", 4, option);
 			AppendECI("iso-8859-3", 5, option);
@@ -83,6 +138,11 @@ namespace Gma.QrCodeNet.Encoding.DataEncodation
 			AppendECI("shift_jis", 20, option);
 			AppendECI("utf-8", 26, option);
 		}
+
+		/// <remarks>ISO/IEC 18004:2006E ECI Designator Page 24</remarks>
+		/// <param name="eCIValue">Range: 0 ~ 999999</param>
+		/// <returns>Number of bits for ECI Header</returns>
+		internal static int NumOfECIHeaderBits(int eCIValue) => NumOfAssignmentBits(eCIValue) + 4;
 
 		internal int GetECIValueByName(string encodingName)
 		{
@@ -118,39 +178,6 @@ namespace Gma.QrCodeNet.Encoding.DataEncodation
 			}
 		}
 
-		/// <remarks>ISO/IEC 18004:2006E ECI Designator Page 24</remarks>
-		/// <param name="eCIValue">Range: 0 ~ 999999</param>
-		/// <returns>Number of Codewords(Byte) for ECI Assignment Value</returns>
-		private static int NumOfCodewords(int eCIValue)
-		{
-			if (eCIValue >= 0 && eCIValue <= 127)
-			{
-				return 1;
-			}
-			else if (eCIValue > 127 && eCIValue <= 16383)
-			{
-				return 2;
-			}
-			else if (eCIValue > 16383 && eCIValue <= 999999)
-			{
-				return 3;
-			}
-			else
-			{
-				throw new ArgumentOutOfRangeException($"{nameof(eCIValue)} should be in range: 0 to 999999.");
-			}
-		}
-
-		/// <remarks>ISO/IEC 18004:2006E ECI Designator Page 24</remarks>
-		/// <param name="eCIValue">Range: 0 ~ 999999</param>
-		/// <returns>Number of bits for ECI Assignment Value</returns>
-		private static int NumOfAssignmentBits(int eCIValue) => NumOfCodewords(eCIValue) * 8;
-
-		/// <remarks>ISO/IEC 18004:2006E ECI Designator Page 24</remarks>
-		/// <param name="eCIValue">Range: 0 ~ 999999</param>
-		/// <returns>Number of bits for ECI Header</returns>
-		internal static int NumOfECIHeaderBits(int eCIValue) => NumOfAssignmentBits(eCIValue) + 4;
-
 		/// <returns>ECI table in Dictionary collection</returns>
 		public Dictionary<string, int> GetECITable()
 		{
@@ -182,22 +209,6 @@ namespace Gma.QrCodeNet.Encoding.DataEncodation
 			return _valueToName.ContainsKey(eciValue);
 		}
 
-		/// <summary>
-		/// ISO/IEC 18004:2006 Chapter 6.4.2 Mode indicator = 0111 Page 23
-		/// </summary>
-		private const int ECIMode = 7;
-
-		private const int ECIIndicatorNumBits = 4;
-
-		/// <summary>
-		/// Length indicator for number of ECI codewords
-		/// </summary>
-		/// <remarks>ISO/IEC 18004:2006 Chapter 6.4.2 Page 24.
-		/// 1 codeword length = 0. Any additional codeword add 1 to front. Eg: 3 = 110</remarks>
-		/// <description>Bits required for each one is:
-		/// one = 1, two = 2, three = 3</description>
-		private enum ECICodewordsLength { One = 0, Two = 2, Three = 6 }
-
 		/// <remarks>ISO/IEC 18004:2006 Chapter 6.4.2 Page 24.</remarks>
 		internal BitList GetECIHeader(string encodingName)
 		{
@@ -209,6 +220,7 @@ namespace Gma.QrCodeNet.Encoding.DataEncodation
 			};
 
 			int eciAssignmentByte = NumOfCodewords(eciValue);
+
 			// Number of bits = Num codewords indicator + codeword value = Number of codewords * 8
 			// Chapter 6.4.2.1 ECI Designator ISOIEC 18004:2006 Page 24
 			int eciAssignmentBits;
