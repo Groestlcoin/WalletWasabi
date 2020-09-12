@@ -124,7 +124,7 @@ namespace WalletWasabi.Wallets
 		{
 			if (Directory.Exists(BlocksFolderPath))
 			{
-				if (Network == Network.RegTest)
+				if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 				{
 					Directory.Delete(BlocksFolderPath, true);
 					Directory.CreateDirectory(BlocksFolderPath);

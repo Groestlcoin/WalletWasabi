@@ -43,7 +43,7 @@ namespace WalletWasabi.Wallets
 		{
 			get
 			{
-				if (Network == Network.RegTest)
+				if (Network == NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)
 				{
 					return Nodes.ConnectedNodes.First();
 				}
@@ -154,7 +154,7 @@ namespace WalletWasabi.Wallets
 			{
 				try
 				{
-					if (LocalBitcoinCoreNode is null || (!LocalBitcoinCoreNode.IsConnected && Network != Network.RegTest)) // If RegTest then we're already connected do not try again.
+					if (LocalBitcoinCoreNode is null || (!LocalBitcoinCoreNode.IsConnected && Network != NBitcoin.Altcoins.Groestlcoin.Instance.Regtest)) // If RegTest then we're already connected do not try again.
 					{
 						DisconnectDisposeNullLocalBitcoinCoreNode();
 						using var handshakeTimeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -198,7 +198,7 @@ namespace WalletWasabi.Wallets
 						catch (OperationCanceledException) when (handshakeTimeout.IsCancellationRequested)
 						{
 							Logger.LogWarning($"Wasabi could not complete the handshake with the local node. Probably Wasabi is not whitelisted by the node.{Environment.NewLine}" +
-								"Use \"whitebind\" in the node configuration. (Typically whitebind=127.0.0.1:8333 if Wasabi and the node are on the same machine and whitelist=1.2.3.4 if they are not.)");
+								"Use \"whitebind\" in the node configuration. (Typically whitebind=127.0.0.1:1331 if Wasabi and the node are on the same machine and whitelist=1.2.3.4 if they are not.)");
 							throw;
 						}
 					}

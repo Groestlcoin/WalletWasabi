@@ -101,10 +101,10 @@ namespace WalletWasabi.Tests.UnitTests.Transactions
 			clientParameters.Version = 1;
 			clientParameters.MaxAdditionalFeeContribution = new Money(50, MoneyUnit.MilliBTC);
 
-			Uri result = PayjoinClient.ApplyOptionalParameters(new Uri("http://test.me/btc/?something=1"), clientParameters);
+			Uri result = PayjoinClient.ApplyOptionalParameters(new Uri("http://test.me/grs/?something=1"), clientParameters);
 
 			// Assert that the final URI does not contain `something=1` and that it contains proper parameters (in lowercase!).
-			Assert.Equal("http://test.me/btc/?v=1&disableoutputsubstitution=false&maxadditionalfeecontribution=5000000", result.AbsoluteUri);
+			Assert.Equal("http://test.me/grs/?v=1&disableoutputsubstitution=false&maxadditionalfeecontribution=5000000", result.AbsoluteUri);
 		}
 
 		[Fact]

@@ -70,7 +70,7 @@ namespace WalletWasabi.Tests.RegressionTests
 		public async Task GetExchangeRatesAsync()
 		{
 			using var client = new TorHttpClient(new Uri(RegTestFixture.BackendEndPoint), null);
-			using var response = await client.SendAsync(HttpMethod.Get, $"/api/v{WalletWasabi.Helpers.Constants.BackendMajorVersion}/btc/offchain/exchange-rates");
+			using var response = await client.SendAsync(HttpMethod.Get, $"/api/v{WalletWasabi.Helpers.Constants.BackendMajorVersion}/grs/offchain/exchange-rates");
 			Assert.True(response.StatusCode == HttpStatusCode.OK);
 
 			var exchangeRates = await response.Content.ReadAsJsonAsync<List<ExchangeRate>>();
@@ -102,7 +102,7 @@ namespace WalletWasabi.Tests.RegressionTests
 
 			Logger.TurnOff();
 			using (var client = new TorHttpClient(new Uri(RegTestFixture.BackendEndPoint), null))
-			using (var response = await client.SendAsync(HttpMethod.Post, $"/api/v{WalletWasabi.Helpers.Constants.BackendMajorVersion}/btc/blockchain/broadcast", content))
+			using (var response = await client.SendAsync(HttpMethod.Post, $"/api/v{WalletWasabi.Helpers.Constants.BackendMajorVersion}/grs/blockchain/broadcast", content))
 			{
 				Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 				Assert.Equal("Transaction is already in the blockchain.", await response.Content.ReadAsJsonAsync<string>());
@@ -119,7 +119,7 @@ namespace WalletWasabi.Tests.RegressionTests
 
 			Logger.TurnOff();
 			using (var client = new TorHttpClient(new Uri(RegTestFixture.BackendEndPoint), null))
-			using (var response = await client.SendAsync(HttpMethod.Post, $"/api/v{WalletWasabi.Helpers.Constants.BackendMajorVersion}/btc/blockchain/broadcast", content))
+			using (var response = await client.SendAsync(HttpMethod.Post, $"/api/v{WalletWasabi.Helpers.Constants.BackendMajorVersion}/grs/blockchain/broadcast", content))
 			{
 				Assert.NotEqual(HttpStatusCode.OK, response.StatusCode);
 				Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
@@ -199,7 +199,7 @@ namespace WalletWasabi.Tests.RegressionTests
 		[Fact]
 		public async Task StatusRequestTestAsync()
 		{
-			string request = $"/api/v{WasabiClient.ApiVersion}/btc/Blockchain/status";
+			string request = $"/api/v{WasabiClient.ApiVersion}/grs/Blockchain/status";
 			(string password, IRPCClient rpc, Network network, Coordinator coordinator, ServiceConfiguration serviceConfiguration, BitcoinStore bitcoinStore, Backend.Global global) = await Common.InitializeTestEnvironmentAsync(RegTestFixture, 1);
 
 			var indexBuilderService = global.IndexBuilderService;

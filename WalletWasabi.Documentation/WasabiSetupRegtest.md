@@ -28,7 +28,7 @@ Linux: $HOME/.bitcoin/
 ```C#
 regtest.server = 1
 regtest.listen = 1
-regtest.whitebind = 127.0.0.1:18444
+regtest.whitebind = 127.0.0.1:18888
 regtest.rpchost = 127.0.0.1
 regtest.rpcport = 18443
 regtest.rpcuser = 7c9b6473600fbc9be1120ae79f1622f42c32e5c78d
@@ -64,11 +64,11 @@ Linux: "/home/{your username}/.walletwasabi/backend"
 {
   "Network": "RegTest",
   "BitcoinRpcConnectionString": "7c9b6473600fbc9be1120ae79f1622f42c32e5c78d:309bc9961d01f388aed28b630ae834379296a8c8e3",
-  "MainNetBitcoinP2pEndPoint": "127.0.0.1:8333",
-  "TestNetBitcoinP2pEndPoint": "127.0.0.1:18333",
-  "RegTestBitcoinP2pEndPoint": "127.0.0.1:18444",
-  "MainNetBitcoinCoreRpcEndPoint": "127.0.0.1:8332",
-  "TestNetBitcoinCoreRpcEndPoint": "127.0.0.1:18332",
+  "MainNetBitcoinP2pEndPoint": "127.0.0.1:1331",
+  "TestNetBitcoinP2pEndPoint": "127.0.0.1:17777",
+  "RegTestBitcoinP2pEndPoint": "127.0.0.1:18888",
+  "MainNetBitcoinCoreRpcEndPoint": "127.0.0.1:1441",
+  "TestNetBitcoinCoreRpcEndPoint": "127.0.0.1:17766",
   "RegTestBitcoinCoreRpcEndPoint": "127.0.0.1:18443"
 }
 ```
@@ -78,7 +78,7 @@ Linux: "/home/{your username}/.walletwasabi/backend"
 ```
 7. Start Bitcoin Core in RegTest.
 8. Go to WalletWasabi folder
-9. Open the command line and enter. This will build all the projects under this directory. 
+9. Open the command line and enter. This will build all the projects under this directory.
 `dotnet build`
 10. Go to WalletWasabi\WalletWasabi.Backend folder.
 `dotnet run --no-build`

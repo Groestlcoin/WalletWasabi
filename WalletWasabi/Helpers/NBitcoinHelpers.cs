@@ -109,17 +109,17 @@ namespace WalletWasabi.Helpers
 			Key k;
 			try
 			{
-				k = Key.Parse(keyString, Network.Main);
+				k = Key.Parse(keyString, NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet);
 			}
 			catch
 			{
 				try
 				{
-					k = Key.Parse(keyString, Network.TestNet);
+					k = Key.Parse(keyString, NBitcoin.Altcoins.Groestlcoin.Instance.Testnet);
 				}
 				catch
 				{
-					k = Key.Parse(keyString, Network.RegTest);
+					k = Key.Parse(keyString, NBitcoin.Altcoins.Groestlcoin.Instance.Regtest);
 				}
 			}
 

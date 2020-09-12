@@ -86,10 +86,10 @@ namespace WalletWasabi.Hwi
 				var newOptions = BuildOptions(firstNoFingerprintEntry.Model, firstNoFingerprintEntry.Path, fingerprint: null, options.Where(x => x.Type != HwiOptions.Fingerprint).ToArray());
 				return await SendCommandAsync(newOptions, command, arguments, openConsole, cancel, isRecursion: true);
 			}
-			catch (HwiException ex) when (Network != Network.Main && ex.ErrorCode == HwiErrorCode.UnknownError && ex.Message?.Contains("DataError: Forbidden key path") is true)
+			catch (HwiException ex) when (Network != Network.NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet && ex.ErrorCode == HwiErrorCode.UnknownError && ex.Message?.Contains("DataError: Forbidden key path") is true)
 			{
 				// Trezor only accepts KeyPath 84'/1' on TestNet from v2.3.1. We fake that we are on MainNet to ensure compatibility.
-				string fixedArguments = HwiParser.ToArgumentString(Network.Main, options, command, commandArguments);
+				string fixedArguments = HwiParser.ToArgumentString(NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet, options, command, commandArguments);
 				(string responseString, int exitCode) = await Bridge.SendCommandAsync(fixedArguments, openConsole, cancel, standardInputWriter).ConfigureAwait(false);
 
 				ThrowIfError(responseString, options, fixedArguments, exitCode);
