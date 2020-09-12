@@ -21,7 +21,7 @@ namespace WalletWasabi.WebClients
 		{
 			// new BlockchainInfoExchangeRateProvider(),
 			// new BitstampExchangeRateProvider(),
-			new CoinGeckoExchangeRateProvider(),
+			new CoinGeckoExchangeRateProvider()
 			// new CoinbaseExchangeRateProvider(),
 			// new GeminiExchangeRateProvider(),
 			// new ItBitExchangeRateProvider()
