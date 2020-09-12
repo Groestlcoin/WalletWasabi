@@ -79,7 +79,7 @@ namespace WalletWasabi.Gui.Controls.WalletExplorer
 					}
 					else
 					{
-						FinalTransaction = new SmartTransaction(Transaction.Parse(textToPaste, Global.Network ?? Network.NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet), WalletWasabi.Models.Height.Unknown);
+						FinalTransaction = new SmartTransaction(Transaction.Parse(textToPaste, Global.Network ?? NBitcoin.Altcoins.Groestlcoin.Instance.Mainnet), WalletWasabi.Models.Height.Unknown);
 					}
 				}
 				catch (Exception ex)

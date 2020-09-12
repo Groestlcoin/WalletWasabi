@@ -57,8 +57,6 @@ namespace WalletWasabi.Gui.Tabs
 
 		public string FAQLink => "https://groestlcoin.org/forum/";
 
-		public string FAQLink => "https://groestlcoin.org/forum/";
-
 		public string DocsLink => "https://groestlcoin.org/forum/";
 
 		public override void OnOpen(CompositeDisposable disposables)

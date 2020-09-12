@@ -73,7 +73,7 @@ namespace WalletWasabi.Helpers
 			MinProtocolCapabilities = new ProtocolCapabilities { SupportGetBlock = true, SupportWitness = true }
 		};
 
-		public static readonly ExtPubKey FallBackCoordinatorExtPubKey = NBitcoinHelpers.BetterParseExtPubKey("xpub6D2PqhWBAbF3xgfaAUW73KnaCXUroArcgMTzNkNzfVX7ykkSzQGbqaXZeaNyxKbZojAAqDwsne6B7NcVhiTrXbGYrQNq1yF76NkgdonGrEa");
+		public static readonly ExtPubKey FallBackCoordinatorExtPubKey = NBitcoinHelpers.BetterParseExtPubKey("xpub661MyMwAqRbcGAaqpmXCN8DVnH6oqd6L1VdczEmAeUmHaSMwNFPZCsDyEcBATWe2KTkBcxSqFANYx3hrJiRmd4NWAekoxvrJdBhY3ZBDj9Z");
 
 		public static string[] UserAgents = new[]
 		{

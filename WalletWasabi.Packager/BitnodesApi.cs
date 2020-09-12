@@ -113,11 +113,11 @@ namespace WalletWasabi.Packager
 
 					// Parse "major.minor" part of version. As Bitcoin Core versions are in form "0.xx.<something>",
 					// the version part is represented by 4 characters.
-					string satoshiClientVersion = userAgent.Substring(userAgent.IndexOf(BitcoinCoreClientUserAgentPrefix) + "Satoshi:".Length, length: 4);
+					string satoshiClientVersion = userAgent.Substring(userAgent.IndexOf(BitcoinCoreClientUserAgentPrefix) + "Groestlcoin:".Length, length: 4);
 					var version = new Version(satoshiClientVersion);
 					bool addToResult = currentOnions is null || currentOnions.Contains(node.Name);
 
-					if (version >= new Version("0.16") && addToResult)
+					if (version >= new Version("2.16.3") && addToResult)
 					{
 						onions.Add(node.Name);
 					}

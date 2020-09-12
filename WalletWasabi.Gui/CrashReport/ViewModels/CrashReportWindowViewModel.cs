@@ -33,9 +33,9 @@ namespace WalletWasabi.Gui.CrashReport.ViewModels
 		private CrashReporter CrashReporter { get; }
 		public int MinWidth => 520;
 		public int MinHeight => 360;
-		public string Title => "Wasabi Wallet - Crash Reporting";
-		public string ReportTitle => "Wasabi has crashed";
-		public string Details => $"Unfortunately, Wasabi has crashed. For more information, please open the log file. You may report this crash to the support team.{Environment.NewLine}{Environment.NewLine}Please always consider your privacy before sharing any information!{Environment.NewLine}{Environment.NewLine}Exception information:";
+		public string Title => "GroestlMix Wallet - Crash Reporting";
+		public string ReportTitle => "GroestlMix has crashed";
+		public string Details => $"Unfortunately, GroestlMix has crashed. For more information, please open the log file. You may report this crash to the support team.{Environment.NewLine}{Environment.NewLine}Please always consider your privacy before sharing any information!{Environment.NewLine}{Environment.NewLine}Exception information:";
 		public string Message => CrashReporter?.SerializedException?.Message;
 
 		public ReactiveCommand<Unit, Unit> OpenLogCommand { get; }

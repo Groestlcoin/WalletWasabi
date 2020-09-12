@@ -17,7 +17,7 @@
             <StackPanel>
               <TextBlock Text="Which hardware wallets are supported?" FontWeight="Bold" />
               <TextBlock Text="- Coldcard and Ledger Nano S." TextWrapping="Wrap" />
-              <TextBlock Text="- While other hardware wallets may work, they were not tested by Wasabi developers." TextWrapping="Wrap" />
+              <TextBlock Text="- While other hardware wallets may work, they were not tested by Groestlcoin developers." TextWrapping="Wrap" />
             </StackPanel>
           </StackPanel>
         </Grid>

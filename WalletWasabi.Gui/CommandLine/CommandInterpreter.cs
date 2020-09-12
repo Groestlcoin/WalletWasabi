@@ -78,7 +78,7 @@ namespace WalletWasabi.Gui.CommandLine
 		{
 			Out.WriteLine($"GroestlMix Client Version: {Constants.ClientVersion}");
 			Out.WriteLine($"Compatible Coordinator Version: {Constants.ClientSupportBackendVersionText}");
-			Out.WriteLine($"Compatible Bitcoin Core Version: {Constants.BitcoinCoreVersion}");
+			Out.WriteLine($"Compatible Groestlcoin Core Version: {Constants.BitcoinCoreVersion}");
 			Out.WriteLine($"Compatible Hardware Wallet Interface Version: {Constants.HwiVersion}");
 		}
 	}

@@ -44,7 +44,7 @@ Available commands are:
 			Assert.Equal(
 				$@"Wasabi Client Version: {Constants.ClientVersion}
 Compatible Coordinator Version: {Constants.ClientSupportBackendVersionText}
-Compatible Bitcoin Core and Bitcoin Knots Versions: {Constants.BitcoinCoreVersion}
+Compatible Groestlcoin Core Version: {Constants.BitcoinCoreVersion}
 Compatible Hardware Wallet Interface Version: {Constants.HwiVersion}
 ",
 				outW.ToString(),
@@ -77,7 +77,7 @@ wassabee: Use `wassabee help` for usage.
 			Assert.Equal(
 				$@"Wasabi Client Version: {Constants.ClientVersion}
 Compatible Coordinator Version: {Constants.ClientSupportBackendVersionText}
-Compatible Bitcoin Core and Bitcoin Knots Versions: {Constants.BitcoinCoreVersion}
+Compatible Groestlcoin Core Version: {Constants.BitcoinCoreVersion}
 Compatible Hardware Wallet Interface Version: {Constants.HwiVersion}
 Usage: wassabee [OPTIONS]+
 Launches Wasabi Wallet.
