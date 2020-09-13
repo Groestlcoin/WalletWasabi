@@ -64,7 +64,7 @@ namespace WalletWasabi.Gui.Shell.Commands
 					{
 						try
 						{
-							await IoHelpers.OpenBrowserAsync("https://docs.wasabiwallet.io/");
+							await IoHelpers.OpenBrowserAsync("https://groestlcoin.org/forum/");
 						}
 						catch (Exception ex)
 						{

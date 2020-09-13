@@ -41,7 +41,7 @@
             </CheckBox>
             <StackPanel IsVisible="{Binding ShowAdvancedOptions}">
               <controls:ExtendedTextBox Text="{Binding AccountKeyPath}" Watermark="Account Key Path" UseFloatingWatermark="True" />
-              <TextBlock Text="Wasabi can only monitor native SegWit (bech32) addresses." Classes="warningMessage" />
+              <TextBlock Text="GroestlMix can only monitor native SegWit (bech32) addresses." Classes="warningMessage" />
             </StackPanel>
             <StackPanel IsVisible="{Binding ShowAdvancedOptions}">
               <controls:ExtendedTextBox Text="{Binding MinGapLimit}" Watermark="Minimum Gap Limit" UseFloatingWatermark="True" />

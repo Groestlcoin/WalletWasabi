@@ -28,7 +28,7 @@ namespace WalletWasabi.WebClients.Coinbase
 		{
 			using var httpClient = new HttpClient();
 			httpClient.BaseAddress = new Uri("https://api.coinbase.com");
-			var response = await httpClient.GetAsync("/v2/exchange-rates?currency=GRS");
+			var response = await httpClient.GetAsync("/v2/exchange-rates?currency=BTC");
 			var wrapper = await response.Content.ReadAsJsonAsync<DataWrapper>();
 
 			var exchangeRates = new List<ExchangeRate>
