@@ -1,10 +1,10 @@
-# Developers' Guide for debugging Wasabi
+# Developers' Guide for debugging GroestlMix
 
-This guide is for giving detailed instructions about how to debug Wasabi Wallet components to those developers who want to contribute to the project.
+This guide is for giving detailed instructions about how to debug GroestlMix Wallet components to those developers who want to contribute to the project.
 We will focus on how to achieve this with `vscode` first because that is the cross-platform IDE used by some of the developer team members.
 
 ## Before Starting
-We assume the reader has already read the project [README](https://github.com/zkSNACKs/WalletWasabi/blob/master/README.md) file and has installed the [.NET Core 3.1 SDK](https://www.microsoft.com/net/download), and knows how to clone the repository and build the Wasabi solution.
+We assume the reader has already read the project [README](https://github.com/zkSNACKs/WalletWasabi/blob/master/README.md) file and has installed the [.NET Core 3.1 SDK](https://www.microsoft.com/net/download), and knows how to clone the repository and build the GroestlMix solution.
 
 
 ## Install VS Code and C# extension
@@ -21,18 +21,18 @@ Installing this extension can take a while.
 
 ### 3: Open the WalletWasabi directory in VS Code
 Go to `File->Open Folder` and open the WalletWasabi directory in Visual Studio Code.
-The Wasabi vscode settings forces a download of the latest omnisharp versions every time the folder is opened and this can take a while.
+The GroestlMix vscode settings forces a download of the latest omnisharp versions every time the folder is opened and this can take a while.
 
 After this step we are ready to start configuring the build tasks and the launches.
 
-## Understanding the Wasabi components
+## Understanding the GroestlMix components
 
-Wasabi Wallet is a client/server system where the client part is the Wasabi Wallet that users download and install on their machines, and the server part is the Wasabi backend that runs on the zkSNACKs servers.
-Additionally, the solution contains other components like the Packager used to prepare the Wasabi client to be distributed, integration tests, project, and others.
+GroestlMix Wallet is a client/server system where the client part is the GroestlMix Wallet that users download and install on their machines, and the server part is the GroestlMix backend that runs on the Groestlcoin servers.
+Additionally, the solution contains other components like the Packager used to prepare the GroestlMix client to be distributed, integration tests, project, and others.
 
 Here we are going to focus first on how to debug the client component, and then the backend component.
 
-### Wasabi Client
+### GroestlMix Client
 
 Let us start by creating the launcher (it goes into the `.vscode/launch.json` file).
 This file contains the list of projects that can be launched, how to do it, what tasks have to be executed before the launching, etc.
@@ -41,7 +41,7 @@ This file contains the list of projects that can be launched, how to do it, what
 {
    "version": "0.2.0",
    "configurations": [{
-      "name": "Wasabi GUI .NET Core",
+      "name": "GroestlMix GUI .NET Core",
       "type": "coreclr",
       "request": "launch",
       "preLaunchTask": "build-client",
@@ -80,7 +80,7 @@ That is defined in the tasks file (it goes into `.vscode/tasks.json` file).
 After these two files are created press (CTRL+SHIFT+D) to go to the debugger, set a couple of breakpoints, select the `Wasabi GUI .NET Core` launcher (it should be the only one available) and press the play button.
 That is all.
 
-### Wasabi Backend
+### GroestlMix Backend
 
 In the same way we did with the client part, we need to create a launcher and a task for running and debugging the server-side component.
 Let us start with the launcher.
@@ -315,13 +315,13 @@ You can tweak debugging options for unit tests by addind the followin setting to
 
 ## How to setup and run the whole system
 
-Sometimes, as developers, we need to test an advanced interaction between the Bitcoin Core node, the Coordinator, and one or more Wasabi clients.
+Sometimes, as developers, we need to test an advanced interaction between the Groestlcoin Core node, the Coordinator, and one or more GroestlMix clients.
 Just imagine a case in which we want to verify the system behavior after a blockchain reorg.
 In these cases we have to setup and run all the components, and use regtest.
 
-### Install Bitcoin Core
+### Install Groestlcoin Core
 
-Download and install Bitcoin Core from [https://bitcoincore.org/bin/](https://bitcoincore.org/bin/).
+Download and install Groestlcoin Core from [https://groestlcoin.org/](https://groestlcoin.org/).
 
 
 ### Running the backend (coordinator)
@@ -329,13 +329,13 @@ Download and install Bitcoin Core from [https://bitcoincore.org/bin/](https://bi
 There is more than one way to do this:
 
 * From **VSCode** go to the Debug panel (CTRL+SHIFT+D), select `Wasabi Backend .NET Core` and press play.
-* From **Terminal** just type `dotnet run <WasabiProjectFolder>/WalletWasabi.Backend/WalletWasabi.Backend.csproj`
+* From **Terminal** just type `dotnet run <GroestlMixProjectFolder>/WalletWasabi.Backend/WalletWasabi.Backend.csproj`
 
 ### Get some coins to test
 
-Once the Wasabi backend, the bitcoin node and the Wasabi client are running, we can mine some blocks and get the new mined coins into our Wasabi wallet.
+Once the GroestlMix backend, the groestlcoin node and the GroestlMix client are running, we can mine some blocks and get the new mined coins into our GroestlMix wallet.
 
-1. Go to Wasabi and generate a new address
-2. Open a terminal and type `bitcoin-cli -regtest generatetoaddress 101 <your-wasabi-address>`
+1. Go to GroestlMix and generate a new address
+2. Open a terminal and type `groestlcoin-cli -regtest generatetoaddress 101 <your-groestlmix-address>`
 
-After this we should receive our first 50 bitcoins!
+After this we should receive our first 50 groestlcoins!

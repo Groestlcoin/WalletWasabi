@@ -1,6 +1,6 @@
 # Ports
 
-A reference of common local ports used by Wasabi and related software.
+A reference of common local ports used by GroestlMix and related software.
 HiddenWallet's ports (3712x) are chosen within a long range of unassigned IANA ports, based on [this](https://stackoverflow.com/a/28369841/2061103) statistic, but also checked against [Service Name and Transport Protocol Port Number Registry](https://www.iana.org/assignments/service-names-port-numbers/service-names-port-numbers.xhtml).
 
 |Port  | Application |
@@ -12,8 +12,8 @@ HiddenWallet's ports (3712x) are chosen within a long range of unassigned IANA p
 |37124 | Tor socks port used by NTumbleBit |
 |37125 | Tor control port used by NTumbleBit |
 |37126 | Chaumian Tumbler |
-|37127 | Wallet Wasabi Backend |
-|37128 | Wallet Wasabi RPC Server |
+|37127 | Wallet GroestlMix Backend |
+|37128 | Wallet GroestlMix RPC Server |
 |9050  | Default Tor socks port |
 |9051  | Default Tor control port |
 |9150  | Tor socks port used by Tor Browser |

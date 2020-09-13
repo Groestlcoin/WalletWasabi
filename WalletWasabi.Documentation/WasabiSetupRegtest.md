@@ -1,30 +1,28 @@
-# Wasabi Setup on RegTest
+# GroestlMix Setup on RegTest
 
 ## Why do this?
 
-RegTest is a local testing environment in which developers can almost instantly generate blocks on demand for testing events, and create private satoshis with no real-world value. Running Wasabi Backend on RegTest allows you to emulate network events and observe how the Backend and the Client react on that.
+RegTest is a local testing environment in which developers can almost instantly generate blocks on demand for testing events, and create private gros with no real-world value. Running GroestlMix Backend on RegTest allows you to emulate network events and observe how the Backend and the Client react on that.
 You do not need to download the blockchain for this setup!
 
-## Setup Bitcoin Knots with RegTest
-
-Bitcoin Knots is working very similarly to Bitcoin Core. You can get a grasp with [this guide](https://bitcoin.org/en/developer-examples).
+## Setup Groestlcoin Core with RegTest
 
 Todo:
 
-1. Install [Bitcoin Knots](http://bitcoinknots.org/) on your computer. Verify the PGP - there is a tutorial [here](http://bitcoinknots.org/)
-2. Start Bitcoin Knots with: bitcoin-qt.exe -regtest then quit immediately. In this way the data directory and the config files will be generated.
+1. Install [Groestlcoin Core](http://groestlcoin.org/) on your computer.
+2. Start Groestlcoin Core with: groestlcoin-qt.exe -regtest then quit immediately. In this way the data directory and the config files will be generated.
 ```
-Windows: "C:\Program Files\Bitcoin\bitcoin-qt.exe" -regtest
-macOS: "/Applications/Bitcoin-Qt.app/Contents/MacOS/Bitcoin-Qt" -regtest
+Windows: "C:\Program Files\Groestlcoin\groestlcoin-qt.exe" -regtest
+macOS: "/Applications/Groestlcoin-Qt.app/Contents/MacOS/Groestlcoin-Qt" -regtest
 Linux:
 ```
-3. Go to Bitcoin Core data directory. If the directory is missing run core bitcoin-qt, then quit immediately. In this way the data directory and the config files will be generated.
+3. Go to Groestlcoin Core data directory. If the directory is missing run core groestlcoin-qt, then quit immediately. In this way the data directory and the config files will be generated.
 ```
-Windows: %APPDATA%\Bitcoin\
-macOS: $HOME/Library/Application Support/Bitcoin/
-Linux: $HOME/.bitcoin/
+Windows: %APPDATA%\Groestlcoin\
+macOS: $HOME/Library/Application Support/Groestlcoin/
+Linux: $HOME/.groestlcoin/
 ```
-4. Edit bitcoin.conf file and add these lines there:
+4. Edit groestlcoin.conf file and add these lines there:
 ```C#
 regtest.server = 1
 regtest.listen = 1
@@ -34,19 +32,19 @@ regtest.rpcport = 18443
 regtest.rpcuser = 7c9b6473600fbc9be1120ae79f1622f42c32e5c78d
 regtest.rpcpassword = 309bc9961d01f388aed28b630ae834379296a8c8e3
 ```
-5. Start Bitcoin Core with: bitcoin-qt.exe -regtest.
+5. Start Groestlcoin Core with: groestlcoin-qt.exe -regtest.
 6. Do not worry about "Syncing Headers" just press the Hide button. Because you run on Regtest, no Mainnet blocks will be downloaded.
 7. Go to MainMenu / Window / Console.
 8. Generate a new address with:
 `getnewaddress`
 9. Generate the first 101 blocks with:
 `generatetoaddress 101 <replace_new_address_here>`
-10. Now you have your own Bitcoin blockchain and you are a God there - try to resist the insurmountable temptation to start your own shit coin, remember there is only one true coin. You can create transactions with the Send button and confirm with:
+10. You can create transactions with the Send button and confirm with:
 `generatetoaddress 1 <replace_new_address_here>`
 
-## Setup Wasabi Backend
+## Setup GroestlMix Backend
 
-Here you will have to build from source, follow [these instructions here](https://github.com/zkSNACKs/WalletWasabi#build-from-source-code).
+Here you will have to build from source, follow [these instructions here](https://github.com/Groestlcoin/WalletWasabi#build-from-source-code).
 
 Todo:
 1. Go to `WalletWasabi\WalletWasabi.Backend` folder.
@@ -76,7 +74,7 @@ Linux: "/home/{your username}/.walletwasabi/backend"
 ```
 "AnonymitySet": 2,
 ```
-7. Start Bitcoin Core in RegTest.
+7. Start Groestlcoin Core in RegTest.
 8. Go to WalletWasabi folder
 9. Open the command line and enter. This will build all the projects under this directory.
 `dotnet build`
@@ -84,25 +82,25 @@ Linux: "/home/{your username}/.walletwasabi/backend"
 `dotnet run --no-build`
 11. Now the Backend is generating the filters and it is running. (You can quit with CTRL-C any time)
 
-## Setup Wasabi Client
+## Setup GroestlMix Client
 
 Todo:
 
 1. Go to `WalletWasabi\WalletWasabi.Gui` folder.
-2. Open the command line and run the Wasabi Client with:
+2. Open the command line and run the GroestlMix Client with:
 `dotnet run --no-build`
 3. Go to Tools/Settings and set the network to RegTest
-4. Close Wasabi and restart it with:
+4. Close GroestlMix and restart it with:
 `dotnet run --no-build`
-5. Generate a wallet in Wasabi named: R1.
-6. Generate a receive address in Wasabi, now go to Bitcoin Core gui to the Send tab.
-7. Send 1 BTC to that address.
-8. Open another Wasabi instance from another command line:
+5. Generate a wallet in GroestlMix named: R1.
+6. Generate a receive address in GroestlMix, now go to Groestlcoin Core gui to the Send tab.
+7. Send 1 GRS to that address.
+8. Open another GroestlMix instance from another command line:
 `dotnet run --no-build`
-9. Generate a wallet in Wasabi named: R2.
-10. Generate a receive address in Wasabi, now go to Bitcoin Core gui to the Send tab.
-11. Send 1 BTC to that address.
+9. Generate a wallet in GroestlMix named: R2.
+10. Generate a receive address in GroestlMix, now go to Groestlcoin Core gui to the Send tab.
+11. Send 1 GRS to that address.
 12. Now in both instance go to CoinJoin tab and enqueue. CoinJoin should happen.
-13. If you see Waiting for confirmation in the Wasabi CoinList you can generate a block in Bitcoin Core to continue coinjoining.
+13. If you see Waiting for confirmation in the GroestlMix CoinList you can generate a block in Groestlcoin Core to continue coinjoining.
 
 Happy CoinJoin!

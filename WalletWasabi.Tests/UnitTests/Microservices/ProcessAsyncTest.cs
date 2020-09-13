@@ -24,7 +24,7 @@ namespace WalletWasabi.Tests.UnitTests.Microservices
 
 				var startInfo = new ProcessStartInfo()
 				{
-					FileName = MicroserviceHelpers.GetBinaryPath("bitcoind"),
+					FileName = MicroserviceHelpers.GetBinaryPath("groestlcoind"),
 					Arguments = "-regtest=1"
 				};
 
