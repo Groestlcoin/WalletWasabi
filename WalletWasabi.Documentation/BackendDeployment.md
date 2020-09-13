@@ -216,7 +216,7 @@ groestlcoind
 # 6. Publish, Configure and Run WalletWasabi.Backend
 
 ```sh
-git clone https://github.com/zkSNACKs/WalletWasabi.git
+git clone https://github.com/Groestlcoin/WalletWasabi.git
 cd WalletWasabi
 dotnet restore
 dotnet build
@@ -317,7 +317,7 @@ The landing page is reachable at `http://<server_IP_address>/index.nginx-debian.
 sudo pico /etc/nginx/sites-available/default
 ```
 
-Fill out the first server's name with the server's IP and domain, and remove the unneeded domains and the second server. (Note that I use `wasabiwallet.co` for testnet.)
+Fill out the first server's name with the server's IP and domain, and remove the unneeded domains and the second server. (Note that I use `groestlcoin.org` for testnet.)
 
 ```
 server {
@@ -325,7 +325,7 @@ server {
     listen        [::]:80;
     listen        443 ssl;
     listen        [::]:443 ssl;
-    server_name   [InsertServerIPHere] wasabiwallet.net www.wasabiwallet.net wasabiwallet.org www.wasabiwallet.org wasabiwallet.info www.wasabiwallet.info wasabiwallet.co www.wasabiwallet.co zerolink.info www.zerolink.info hiddenwallet.org www.hiddenwallet.org;
+    server_name   [InsertServerIPHere] groestlcoin.org www.groestlcoin.org ;
     location / {
         sub_filter '<head>'  '<head><meta name="robots" content="noindex, nofollow" />';
         sub_filter_once on;
@@ -338,7 +338,7 @@ server {
     listen        [::]:80;
     listen        443 ssl;
     listen        [::]:443 ssl;
-    server_name   wasabiwallet.io www.wasabiwallet.io;
+    server_name   groestlcoin.org www.groestlcoin.org;
     location / {
         proxy_pass         http://localhost:37127;
     }
@@ -353,14 +353,14 @@ sudo nginx -s reload
 Setup https, redirect to https when asks. This will modify the above config file, but oh well.
 
 ```sh
-sudo certbot -d wasabiwallet.io -d www.wasabiwallet.io -d wasabiwallet.net -d www.wasabiwallet.net -d wasabiwallet.org -d www.wasabiwallet.org -d wasabiwallet.info -d www.wasabiwallet.info -d wasabiwallet.co -d www.wasabiwallet.co -d zerolink.info -d www.zerolink.info -d hiddenwallet.org -d www.hiddenwallet.org
+sudo certbot -d groestlcoin.org
 ```
 
 certbot will not properly redirect www, so it must be setup by hand, one by one.
 Duplicate all entries like this by adding a `www.`:
 ```
 server {
-    if ($host = wasabiwallet.co) {
+    if ($host = groestlcoin.org) {
         return 301 https://$host$request_uri;
     }
 }
@@ -381,7 +381,7 @@ TestNet: http://testwnp3fugjln6vh5vpj7mvq3lkqqwjj3c2aafyu7laxz42kgwh2rad.onion/s
 Main: http://wasabiukrxmkdgve5kynjztuovbg43uxcbcxn6y2okcrsg7gb6jdmbad.onion/swagger/
 GET fees
 
-http://www.wasabiwallet.io/
+http://groestlcoin.org/
 
 # Check Statuses
 
@@ -405,10 +405,10 @@ Add your extpub to the `CoordinatorExtPubKey`.
 ## Rolling Groestlcoin Core node debug logs
 
 The following command line adds a configuration file to let logrotate service know
-how to rotate the bitcoin debug logs.
+how to rotate the groestlcoin debug logs.
 
 ```sh
-sudo tee -a /etc/logrotate.d/bitcoin <<EOS
+sudo tee -a /etc/logrotate.d/groestlcoin <<EOS
 /home/user/.groestlcoin/debug.log
 {
         su user user

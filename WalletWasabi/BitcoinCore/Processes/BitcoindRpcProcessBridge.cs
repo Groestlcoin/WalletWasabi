@@ -48,7 +48,7 @@ namespace WalletWasabi.BitcoinCore.Processes
 		public async Task StartAsync(CancellationToken cancel)
 		{
 			int ptcv = PrintToConsole ? 1 : 0;
-			string processPath = MicroserviceHelpers.GetBinaryPath("bitcoind");
+			string processPath = MicroserviceHelpers.GetBinaryPath("groestlcoind");
 			string networkArgument = NetworkTranslator.GetCommandLineArguments(Network);
 
 			string args = $"{networkArgument} -datadir=\"{DataDir}\" -printtoconsole={ptcv}";

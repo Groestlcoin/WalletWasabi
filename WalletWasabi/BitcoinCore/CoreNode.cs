@@ -199,7 +199,7 @@ namespace WalletWasabi.BitcoinCore
 		{
 			var invoker = new ProcessInvoker();
 
-			string processPath = MicroserviceHelpers.GetBinaryPath("bitcoind");
+			string processPath = MicroserviceHelpers.GetBinaryPath("groestlcoind");
 			string arguments = "-version";
 
 			ProcessStartInfo processStartInfo = ProcessStartInfoFactory.Make(processPath, arguments);

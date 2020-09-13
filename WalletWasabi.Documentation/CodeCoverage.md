@@ -1,6 +1,6 @@
 # Code coverage (How to)
 
-Wasabi Wallet is built using dotnet core. Currently dotnet XUnit and MSTest templates come with support for [Coverlet](https://github.com/coverlet-coverage/coverlet).
+GroestlMix Wallet is built using dotnet core. Currently dotnet XUnit and MSTest templates come with support for [Coverlet](https://github.com/coverlet-coverage/coverlet).
 
 You can read more about this here https://docs.microsoft.com/en-us/dotnet/core/testing/unit-testing-code-coverage and also here https://codeburst.io/code-coverage-in-net-core-projects-c3d6536fd7d7.
 
